@@ -132,18 +132,13 @@ def test_mcp_install_lifecycle(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Real model and MCP acceptance')
-def test_live_session_updates_over_stdio(tmp_path):
+def test_live_session_updates_over_stdio(tmp_path, install_embedding):
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
     from bl_context.service import identity
     storage.install()
     paths = storage.locations()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory, before = storage.prepare_index_artifacts(paths, 'embeddings')
-        shutil.copytree(cache, directory, dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths, 'embeddings', before)
+    install_embedding()
     identifier = storage.read_manifest(paths)['installation_id']
     child = subprocess.Popen([sys.executable,'-m','bl_context.daemon','--installation-id',identifier], stderr=subprocess.PIPE)
     async def exercise():

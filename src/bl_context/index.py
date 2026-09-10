@@ -13,7 +13,7 @@ import uuid
 from . import storage
 from .preview import preview
 
-MODEL = 'BAAI/bge-small-en'
+from .embedding import MODEL
 COLLECTION = 'context_v1'
 POLICY = 'preview-v2-visible-token384-overlap48'
 
@@ -155,14 +155,12 @@ class Index:
         return status
 
     def load_model(self):
+        from .embedding import require_active
+        require_active(self.paths)
         if self.model is None:
-            from fastembed import TextEmbedding
+            from . import embedding
             from tokenizers import Tokenizer
-            directory, before = storage.prepare_index_artifacts(self.paths, 'embeddings')
-            try:
-                self.model = TextEmbedding(model_name=MODEL, cache_dir=str(directory), threads=2, cuda=False)
-            finally:
-                storage.record_index_artifacts(self.paths, 'embeddings', before)
+            self.model = embedding.load(self.paths)
             model_dir = Path(self.model.model._model_dir)
             digest = hashlib.sha256()
             for filename in (self.model.model.model_description.model_file, 'tokenizer.json'):

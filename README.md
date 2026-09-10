@@ -24,7 +24,7 @@ The onboarding CLI uses Click and Rich. The data directory step is implemented
 and tested on Linux, along with the systemd user service and Codex MCP
 registration; the remaining integration checks report failure.
 Full installation starts the Context user service and registers its MCP server.
-History indexing is explicit; model download occurs on first embedding use.
+History indexing is explicit; the embedding_model installer step downloads and verifies the local model before use.
 The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
 Use the checkout installation below to test this development version.
 
@@ -75,8 +75,8 @@ unknown step IDs and history selections combined with `--no-history` exit 2.
 `skip_reason: "no_history"`; summary wording cannot authorize a skip.
 
 Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp`,
-`codex_skills`, `codex_hooks`, `embedding_model`, `session_discovery`,
-`history_index`, `service_health`, `mcp_health`, `history_retrieval`.
+`codex_skills`, `embedding_model`, `session_discovery`,
+`history_index`, `service_health`, `mcp_health`, `history_retrieval`, `codex_hooks` (last).
 
 The data step has a real subprocess acceptance test covering install, status,
 doctor, uninstall, reinstall and purge. The execution foundation also retains
@@ -231,6 +231,7 @@ fingerprint is recorded to prevent silently mixing different embeddings.
 ```sh
 source .venv/bin/activate
 blctx install codex --step background_service
+blctx install codex --step embedding_model
 
 # Start with one transcript you reviewed in explore:
 blctx index /absolute/path/to/session.jsonl --wait
@@ -248,9 +249,10 @@ blctx context CONTEXT_ID
 
 These commands emit JSON. Index requests return a durable job ID immediately;
 `--wait` polls for up to ten minutes (progress goes to stderr). If it times out,
-the job keeps running: inspect it with `blctx index-status JOB_ID`. First indexing
-use downloads the model into Context's private cache. Embedding inference is
-local; no transcript text is sent to an embedding API.
+the job keeps running: inspect it with `blctx index-status JOB_ID`. Install the model
+first with `blctx install codex --step embedding_model`. Indexing and queries load
+only configured, verified local files; they never trigger a download. Embedding
+inference is local; no transcript text is sent to an embedding API.
 
 The importer uses the same selection policy as `explore --view preview`:
 user requests, visible progress commentary, and final answers are embedded,
@@ -394,6 +396,7 @@ acceptance remains the final onboarding ticket; discovery tests do not claim it.
 ### Trusted lifecycle capture and tagged updates
 
 ```sh
+blctx install codex --step embedding_model
 blctx install codex --step codex_hooks
 ```
 
@@ -478,3 +481,77 @@ Automated tests use isolated hook roots and never grant trust. They distinguish
 synthetic handler/recovery tests from fresh Codex discovery and real trusted
 client delivery. Full installer UX and the remaining onboarding checks are still
 separate acceptance work.
+
+### Download and verify the local embedding model
+
+```sh
+blctx install codex --step embedding_model
+blctx status --step embedding_model --json
+blctx doctor --step embedding_model
+```
+
+The terminal shows actual downloaded bytes, a progress bar and ETA, followed by
+model loading and a retrieval probe. Cached bytes are checked and reused. Piped
+output uses plain stage messages; `--json` emits only the structured result.
+Ctrl-C leaves partial downloads available for the same install command to resume.
+Connection failures retry up to three attempts; HTTP 429 reports the host's retry
+information and keeps partial bytes instead of repeatedly requesting the files.
+Checksum failures never publish an unverified file.
+
+The selected model remains **BAAI/bge-small-en**, 384 dimensions, English, CPU,
+through FastEmbed 0.8.0 / ONNX Runtime with two threads. It uses the existing
+query/passage preprocessing and index fingerprint, avoiding a vector-space change
+for existing indexes. This is a compatibility choice, not a claim that it is the
+best current embedding model. The upstream model has a 512-token input limit;
+Context splits documents into 384-token chunks with 48-token overlap.
+
+Files download directly from [Qdrant/bge-small-en on Hugging Face](https://huggingface.co/Qdrant/bge-small-en/tree/8791246cc2a79c7949a4dc0d4a018cbd7d024879),
+pinned to revision `8791246cc2a79c7949a4dc0d4a018cbd7d024879` and checked against
+bundled SHA256 hashes. Six files total **133,827,551 bytes (133.8 MB / 127.6 MiB)**.
+There is no floating branch lookup or fallback to an unpinned mirror. Both the
+[original model card](https://huggingface.co/BAAI/bge-small-en) and Qdrant's pinned
+model card declare **MIT**. The weights are downloaded separately from the Python
+package. Any future redistribution must retain the applicable license notices.
+
+Private cache: `$XDG_CACHE_HOME/bl-context/embeddings/<revision>`, defaulting to
+`~/.cache/bl-context/embeddings/<revision>`. Directories are 0700, downloaded files
+0600. An active model selection is recorded separately in the installation
+manifest. Verification loads the model offline, checks all file hashes, checks
+finite nonzero 384-dimensional query and passage vectors, and tests three ranked
+retrieval matches. It does not download or repair files.
+
+Normal `blctx uninstall codex` disconnects the model and retains cache. Status and
+doctor then fail, including after reinstalling only the data directory. Explicit
+model reinstall verifies and reactivates the retained bytes without network;
+`HF_HUB_OFFLINE=1 blctx install codex --step embedding_model` exercises this path.
+`blctx uninstall codex --purge` removes owned model files, including incomplete
+ones, while preserving unknown files and original Codex transcripts. Earlier
+FastEmbed-managed caches are retained but do not count as this pinned installation;
+upgrading can require one download into the new revision directory.
+
+Downloads require access to Hugging Face and its redirected CDN/storage hosts.
+No account, Context backend, shared access token, or hosted inference API is used.
+The [Hub rate-limit documentation](https://huggingface.co/docs/hub/rate-limits)
+currently lists 3,000 resolver requests per five minutes for anonymous clients,
+per IP; these free limits can change with platform health. Downloads are direct
+from each user's machine, so users do not share a single Context-wide quota.
+Office NATs and mass CI installs can share an IP and encounter throttling.
+Completed installations make no further model download requests. At larger scale,
+consider an explicitly licensed pinned mirror/CDN or preprovisioned cache; don't
+ship one shared Hugging Face credential. Upstream availability and bandwidth are
+not an unlimited service guarantee.
+
+On this development machine, a bounded real-history sample produced 126 chunks
+from 112 visible records in about 5.84 seconds (21.6 chunks/sec), with all six
+hand-written recall queries finding the expected conversation segment in the top
+five. Peak process RSS was about **839 MiB** with batch size 32, including Python,
+ONNX Runtime, tokenizer and transcript parsing; download size is not RAM usage.
+This is a sanity check on one transcript, not a broad quality or hardware benchmark.
+See `tests/evidence/issue-11-measurement.json` and `tests/evidence/issue-11-lifecycle.json`.
+
+For development acceptance, `BLCTX_INDEX_TEST=1 pytest -q` runs real model,
+indexing, daemon and offline lifecycle tests. It reuses the pinned revision under
+`BLCTX_MODEL_TEST_CACHE` (default `/tmp/context-embedding-test-cache`) when present,
+or downloads into each isolated test installation. Ordinary tests stay offline
+and exercise real local HTTP interruption/range/error behavior. Hooks are last in
+the installer checklist; their guided optional approval screen is a follow-up.

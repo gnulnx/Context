@@ -1,0 +1,474 @@
+{
+  "scope": "Isolated HOME/XDG runtime; real model download and CPU verification; no live user installation changed",
+  "records": [
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-issue-11-lifecycle-v2/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.00044908421114087105,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": false
+    },
+    {
+      "command": "blctx doctor --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-issue-11-lifecycle-v2/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.0004124692641198635,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": false
+    },
+    {
+      "command": "blctx install codex --step embedding_model",
+      "exit_code": 0,
+      "terminal": true,
+      "observed_download_progress": true,
+      "observed_verified": true
+    },
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.4122622893191874,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": false
+    },
+    {
+      "command": "blctx doctor --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.4129182337783277,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": false
+    },
+    {
+      "command": "blctx install codex --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [
+          "data_directory"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.013922692742198706,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.5796595560386777,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx uninstall codex --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.024978794623166323,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.0006102258339524269,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx doctor --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.0006144223734736443,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx install codex --step data_directory --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.02242246875539422,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "Embedding model is not configured. Run blctx install codex --step embedding_model.",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.0025371378287672997,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx install codex --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [
+          "data_directory"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.022439713589847088,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.6035503479652107,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.40905431378632784,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx doctor --step embedding_model --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.3972477768547833,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx uninstall codex --purge --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Owned data purged; unrelated files preserved.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.03166576009243727,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx status --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-issue-11-lifecycle-v2/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.0004191286861896515,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    },
+    {
+      "command": "blctx doctor --step embedding_model --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "embedding_model",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Embedding model unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-issue-11-lifecycle-v2/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step embedding_model; completed downloads are reused.",
+            "duration": 0.00042076176032423973,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "offline": true
+    }
+  ],
+  "original_transcript_preserved": true,
+  "unrelated_codex_config_preserved": true,
+  "purge_preserved_unknown_cache_file": true,
+  "purge_removed_model": true
+}

@@ -27,12 +27,14 @@ def report(command, json_output, no_color, *, no_history=False, step=None, purge
     ctx = click.get_current_context()
     json_output = json_output or ctx.obj["json_output"]
     no_color = no_color or ctx.obj["no_color"]
+    from .embedding import progress
     try:
-        results = run_checks(
-            **({"steps": tuple(replace(s, purge=True) for s in UNINSTALL_STEPS)
-               if purge else UNINSTALL_STEPS} if command == "uninstall" else {}),
-            install=command in ("install", "uninstall"), no_history=no_history, selected_step=step,
-        )
+        with progress(None if json_output else Console(no_color=no_color, highlight=False)):
+            results = run_checks(
+                **({"steps": tuple(replace(s, purge=True) for s in UNINSTALL_STEPS)
+                   if purge else UNINSTALL_STEPS} if command == "uninstall" else {}),
+                install=command in ("install", "uninstall"), no_history=no_history, selected_step=step,
+            )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
     success = checks_succeeded(results, no_history=no_history)
@@ -60,7 +62,7 @@ def report(command, json_output, no_color, *, no_history=False, step=None, purge
             console.print(f"   {result.summary}\n", markup=False)
             if result.dependency:
                 console.print("   Prerequisite for selected step.\n")
-            if command == "doctor":
+            if command == "doctor" or (result.step_id == "embedding_model" and result.status == CheckStatus.FAILED):
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
         if command == "uninstall" and success:
             console.print(" Uninstalled.")

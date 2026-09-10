@@ -1,3 +1,4 @@
+ Checking cached model…
 
  Base Layer Context
  Persistent context for coding agents
@@ -14,11 +15,11 @@
  ✓ Codex skills installed
    Codex skill base-layer-context v0.2.0 content and ownership verified.
 
- ✗ Codex hooks installed
-   Prerequisites unavailable
-
  ✗ Embedding model available
-   Not implemented
+   Check failed
+
+   Model cache incomplete and HF_HUB_OFFLINE is set. Retry online to finish the download.
+   Run blctx doctor for diagnostics.
 
  ✗ Existing Codex sessions discovered
    Not implemented
@@ -33,6 +34,9 @@
    Prerequisites unavailable
 
  ✗ Historical memory retrieval verified
+   Prerequisites unavailable
+
+ ✗ Codex hooks installed
    Prerequisites unavailable
 
  Not ready.

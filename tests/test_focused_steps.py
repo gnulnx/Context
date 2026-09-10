@@ -65,11 +65,12 @@ def test_structured_skip_and_full_readiness():
     assert is_ready(results)
     assert not is_ready(results, selected_step='data_directory')
     assert not is_ready(results[:-1])
-    step = STEPS[-1]
-    results[-1] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
+    history_index = next(i for i, s in enumerate(STEPS) if s.step_id == "history_retrieval")
+    step = STEPS[history_index]
+    results[history_index] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
                              'Skipped (--no-history)')
     assert not is_ready(results, no_history=True)
-    results[-1] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
+    results[history_index] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
                              'Any human wording', skip_reason='no_history')
     assert is_ready(results, no_history=True)
     assert not is_ready(results)

@@ -123,15 +123,10 @@ def test_real_hook_discovery_reports_untrusted_without_bypass(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Real background embedding test')
-def test_reconciliation_restart_and_visible_update_dedup(tmp_path):
+def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embedding):
     from test_index import source
     paths, identifier, generation = setup()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory,before = storage.prepare_index_artifacts(paths,'embeddings')
-        shutil.copytree(cache,directory,dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths,'embeddings',before)
+    install_embedding()
     path = tmp_path/'live.jsonl'
     source(path, project='/project')
     progress = 'The rover battery integration now passes its electrical tests.'
@@ -189,16 +184,11 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Actual daemon/capture/model acceptance')
-def test_actual_daemon_drains_hooks_and_recovers_restart(tmp_path):
+def test_actual_daemon_drains_hooks_and_recovers_restart(tmp_path, install_embedding):
     from test_index import source
     from bl_context.service import identity
     paths,identifier,generation = setup()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory,before = storage.prepare_index_artifacts(paths,'embeddings')
-        shutil.copytree(cache,directory,dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths,'embeddings',before)
+    install_embedding()
     path = tmp_path/'capture.jsonl'
     source(path)
     capture.receive(event(path),identifier,generation)
