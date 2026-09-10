@@ -1,0 +1,38 @@
+
+ Base Layer Context
+ Persistent context for coding agents
+
+ ✗ Data directory initialized
+   Not implemented
+
+ ✗ Background service installed
+   Not implemented
+
+ ✗ Codex MCP registered
+   Not implemented
+
+ ✗ Codex skills installed
+   Not implemented
+
+ ✗ Codex hooks installed
+   Not implemented
+
+ ✗ Embedding model available
+   Not implemented
+
+ ✗ Existing Codex sessions discovered
+   Not implemented
+
+ ✗ Historical sessions indexed
+   Not implemented
+
+ ✗ Service healthy
+   Not implemented
+
+ ✗ MCP connection healthy
+   Not implemented
+
+ ✗ Historical memory retrieval verified
+   Not implemented
+
+ Not ready.
