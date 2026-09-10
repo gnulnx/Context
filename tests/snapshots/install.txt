@@ -6,33 +6,33 @@
    Not implemented
 
  ✗ Background service installed
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Codex MCP registered
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Codex skills installed
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Codex hooks installed
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Embedding model available
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Existing Codex sessions discovered
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Historical sessions indexed
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Service healthy
-   Not implemented
+   Prerequisites unavailable
 
  ✗ MCP connection healthy
-   Not implemented
+   Prerequisites unavailable
 
  ✗ Historical memory retrieval verified
-   Not implemented
+   Prerequisites unavailable
 
  Not ready.

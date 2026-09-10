@@ -1,0 +1,704 @@
+{
+  "scope": "Foundation acceptance only. fixture_cli.py contains FIXTURE_CHILD from tests/test_focused_steps.py. Production steps and uninstall remain unimplemented. Temporary paths identify the actual run and are removed afterward.",
+  "records": [
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "status",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "failed",
+            "summary": "Missing",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.194762393832207e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": false,
+      "retained_fixture_exists": false
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "install",
+        "codex",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [
+          "owner"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "owner",
+            "label": "Owner",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 9.449198842048645e-05,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.230897709727287e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "status",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.794673830270767e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "doctor",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.8907863199710846e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "uninstall",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Disconnect",
+            "status": "passed",
+            "summary": "Disconnected",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 5.2449293434619904e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": false,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "status",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "failed",
+            "summary": "Missing",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 2.7301255613565445e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": false,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "doctor",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "failed",
+            "summary": "Missing",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.972882404923439e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": false,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "install",
+        "codex",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [
+          "owner"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "owner",
+            "label": "Owner",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 8.873408660292625e-05,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 7.537286728620529e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "status",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 4.7229696065187454e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "doctor",
+        "--step",
+        "fixture",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "fixture",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 3.917841240763664e-05,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/python",
+        "/tmp/context-issue5-evidence-wooclzsy/fixture_cli.py",
+        "install",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "owner",
+            "label": "Owner",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.00010353606194257736,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "fixture",
+            "label": "Fixture",
+            "status": "passed",
+            "summary": "Present",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 4.3225008994340897e-05,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "future",
+            "label": "Future",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 3.2852403819561005e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true,
+      "owner_exists": true,
+      "retained_fixture_exists": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/blctx",
+        "install",
+        "codex",
+        "--step",
+        "background_service",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": "background_service",
+        "dependencies": [
+          "data_directory"
+        ],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 3.905966877937317e-06,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 2.784188836812973e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 4.186294972896576e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 3.975816071033478e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true
+    },
+    {
+      "command": [
+        "/tmp/context-issue5-venv/bin/blctx",
+        "install",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 4.807952791452408e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 2.7543865144252777e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 2.1033920347690582e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.3816170394420624e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.1720694601535797e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.1511147022247314e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "data_directory",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 9.620562195777893e-07,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "session_discovery, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.3718381524085999e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "service_health",
+            "label": "Service healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.0919757187366486e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "mcp_health",
+            "label": "MCP connection healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "codex_mcp, service_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.0612420737743378e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_retrieval",
+            "label": "Historical memory retrieval verified",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "history_index, mcp_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.0509975254535675e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      },
+      "original_session_preserved": true
+    }
+  ]
+}

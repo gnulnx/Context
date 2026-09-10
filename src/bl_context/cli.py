@@ -5,7 +5,7 @@ import json
 import click
 from rich.console import Console
 
-from .checks import CheckStatus, UNINSTALL_STEPS, is_ready, run_checks
+from .checks import CheckStatus, UNINSTALL_STEPS, is_ready, run_checks, checks_succeeded
 
 
 def output_options(function):
@@ -22,19 +22,25 @@ def main(ctx, json_output, no_color):
     ctx.obj.update(json_output=json_output, no_color=no_color)
 
 
-def report(command, json_output, no_color, *, no_history=False):
+def report(command, json_output, no_color, *, no_history=False, step=None):
     ctx = click.get_current_context()
     json_output = json_output or ctx.obj["json_output"]
     no_color = no_color or ctx.obj["no_color"]
-    results = run_checks(
-        **({"steps": UNINSTALL_STEPS} if command == "uninstall" else {}),
-        install=command == "install", no_history=no_history,
-    )
-    ready = is_ready(results)
+    try:
+        results = run_checks(
+            **({"steps": UNINSTALL_STEPS} if command == "uninstall" else {}),
+            install=command == "install", no_history=no_history, selected_step=step,
+        )
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    success = checks_succeeded(results, no_history=no_history)
+    ready = is_ready(results, no_history=no_history, selected_step=step)
     if json_output:
         click.echo(json.dumps({
             "schema_version": 1, "command": command,
-            "ready": ready, "exit_code": 0 if ready else 1,
+            "ready": ready, "success": success, "selected_step": step,
+            "dependencies": [r.step_id for r in results if r.dependency],
+            "exit_code": 0 if success else 1,
             "checks": [r.to_dict() for r in results],
         }))
     else:
@@ -50,33 +56,44 @@ def report(command, json_output, no_color, *, no_history=False):
             symbol, color = symbols[result.status]
             console.print(f" {symbol} {result.label}", style=color, markup=False)
             console.print(f"   {result.summary}\n", markup=False)
+            if result.dependency:
+                console.print("   Prerequisite for selected step.\n")
             if command == "doctor":
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
-        console.print(" Ready." if ready else " Not ready.")
-    ctx.exit(0 if ready else 1)
+        if step:
+            console.print(" Selected check passed. Full readiness not evaluated."
+                          if success else " Selected check failed. Not ready.")
+        else:
+            console.print(" Ready." if ready else " Not ready.")
+    ctx.exit(0 if success else 1)
 
 
 @main.command()
+@click.option("--step", help="Run one step by its stable ID, resolving install prerequisites.")
 @click.argument("agent", type=click.Choice(["codex"]))
 @click.option("--no-history", is_flag=True, help="Skip historical discovery, indexing, and verification.")
 @output_options
-def install(agent, no_history, json_output, no_color):
+def install(agent, no_history, json_output, no_color, step):
     """Install an agent integration (currently unimplemented)."""
-    report("install", json_output, no_color, no_history=no_history)
+    report("install", json_output, no_color, no_history=no_history, step=step)
 
 
 @main.command()
+@click.option("--step", help="Verify one step without repairing state.")
+@click.option("--no-history", is_flag=True, help="Skip explicit history checks.")
 @output_options
-def status(json_output, no_color):
+def status(json_output, no_color, step, no_history):
     """Check readiness without changing state."""
-    report("status", json_output, no_color)
+    report("status", json_output, no_color, step=step, no_history=no_history)
 
 
 @main.command()
+@click.option("--step", help="Verify one step without repairing state.")
+@click.option("--no-history", is_flag=True, help="Skip explicit history checks.")
 @output_options
-def doctor(json_output, no_color):
+def doctor(json_output, no_color, step, no_history):
     """Explain failed checks (currently all unimplemented)."""
-    report("doctor", json_output, no_color)
+    report("doctor", json_output, no_color, step=step, no_history=no_history)
 
 
 @main.command()
