@@ -64,12 +64,29 @@ class DataDirectoryStep(Step):
             )
 
 
+class BackgroundServiceStep(Step):
+    def install(self):
+        from . import service
+        service.install()
+
+    def verify(self):
+        from . import service
+        try:
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, service.verify())
+        except Exception as exc:
+            return CheckResult(self.step_id, self.label, CheckStatus.FAILED,
+                               "Background service unavailable", diagnostic=str(exc),
+                               remediation="Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.")
+
+
 @dataclass(frozen=True)
 class UninstallStep(Step):
     purge: bool = False
 
     def install(self):
         from . import storage
+        from . import service
+        service.uninstall()
         storage.uninstall(purge=self.purge)
 
     def verify(self):
@@ -81,7 +98,7 @@ class UninstallStep(Step):
 
 STEPS = (
     DataDirectoryStep("data_directory", "Data directory initialized"),
-    Step("background_service", "Background service installed", prerequisites=("data_directory",)),
+    BackgroundServiceStep("background_service", "Background service installed", prerequisites=("data_directory",)),
     Step("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     Step("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
     Step("codex_hooks", "Codex hooks installed", prerequisites=("data_directory",)),

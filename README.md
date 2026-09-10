@@ -21,8 +21,10 @@ print(bl_context.__version__)
 ## CLI development preview
 
 The onboarding CLI uses Click and Rich. The data directory step is implemented
-and tested on Linux; the remaining integration checks report failure.
-No services, models, Codex settings, skills, hooks, or indexes are installed.
+and tested on Linux, along with the systemd user service; the remaining
+integration checks report failure.
+Full installation starts the Context user service. Models, Codex settings,
+skills, hooks, and indexes are not installed yet.
 Use the checkout installation below to test this development version.
 
 ```console
@@ -110,8 +112,8 @@ instead of being overwritten or silently adopted.
 files alone do not pass verification. `blctx uninstall codex --purge` removes only
 the two explicitly owned files and empty directories created by Context. Unknown
 files, pre-existing directories, original Codex transcripts, and unrelated
-configuration are preserved. Service and Codex integration removal will be added
-with those features; this version installs neither.
+configuration are preserved. Uninstall stops and disables the Context service before deactivating data
+ownership. Codex integration removal will be added with those features.
 
 To exercise the real lifecycle without changing your normal user installation:
 
@@ -123,3 +125,40 @@ The test runs the installed `blctx` entry point from `/` with an isolated HOME,
 checks red → green → uninstall → red → reinstall → green, verifies idempotence
 and preservation, and exercises purge. Full readiness stays false while the
 remaining integrations are unimplemented.
+
+
+### Background service (Linux systemd user session)
+
+```sh
+blctx install codex --step background_service
+blctx status --step background_service --json
+blctx doctor --step background_service
+```
+
+Installation creates an installation-specific `blctxd-UUID.service` in the
+Context config directory and enables it through the systemd user manager. It
+starts at user login; no sudo, system service, or lingering configuration is
+required. An unavailable user manager/session bus fails with remediation.
+
+The daemon uses the recorded absolute Python interpreter, reports readiness to
+systemd only after binding a mode-0600 Unix socket in the private state directory,
+and holds an exclusive writer lock on the data directory. Startup and shutdown
+are bounded to 10 and 5 seconds; systemd restarts crashes. Logs are available with
+`journalctl --user -u blctxd-UUID.service` (use the UUID in `installation.json`).
+
+Verification checks active installation ownership, unit content, persistent
+enablement, registration path, running PID/interpreter/arguments and matching
+identity over private IPC. This proves daemon lifecycle, not indexing or retrieval;
+those checks remain unimplemented. Default uninstall stops the process, disables
+registration, and removes its unit/socket before deactivating ownership.
+
+Ordinary tests isolate Context paths and deliberately use an unavailable service
+bus. To run the real systemd acceptance test in a Linux user session:
+
+```sh
+BLCTX_SYSTEMD_TEST=1 python -m pytest -q tests/test_service.py
+```
+
+This opt-in test uses isolated Context directories and a unique unit on the
+current user's real manager. It tests crash recovery, repeated installation,
+missing-unit cleanup, and uninstall, and removes its registration afterward.
