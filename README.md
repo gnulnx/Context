@@ -4,7 +4,7 @@ Persistent context for coding agents.
 
 This repository contains the Python package, onboarding CLI, and the first
 local installation, history retrieval, and Codex MCP integration.
-Automatic lifecycle capture and intelligent-update guidance are still under development.
+Lifecycle capture and tagged updates are available for local testing; full onboarding acceptance remains under development.
 
 ## Install
 
@@ -25,7 +25,7 @@ and tested on Linux, along with the systemd user service and Codex MCP
 registration; the remaining integration checks report failure.
 Full installation starts the Context user service and registers its MCP server.
 History indexing is explicit; model download occurs on first embedding use.
-The historical-recall skill is installed; lifecycle hooks remain pending.
+The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
 Use the checkout installation below to test this development version.
 
 ```console
@@ -253,7 +253,7 @@ use downloads the model into Context's private cache. Embedding inference is
 local; no transcript text is sent to an embedding API.
 
 The importer uses the same selection policy as `explore --view preview`:
-searchable messages are embedded, commentary is retained for context expansion,
+user requests, visible progress commentary, and final answers are embedded,
 and exclusions stay out of the index. Unknown record shapes produce a **partial**
 job with counts; a successful queue acknowledgement never claims completion.
 Changed files are reparsed and reconciled; unchanged snapshots are skipped.
@@ -276,7 +276,7 @@ use `blctx context CONTEXT_ID --offset N --limit 1 --char-offset M`, taking M fr
 
 Coverage describes only imported files, reports changed/missing sources and
 partial imports, and includes recent job states. Querying does not automatically
-capture new Codex activity: rerun `index` for now. Lifecycle hook capture remains separate integration work. Full onboarding readiness remains
+capture new Codex activity by itself. Trusted lifecycle hooks register sessions for background capture; rerun `index` for other explicitly selected history. Full onboarding readiness remains
 red for integrations not yet implemented.
 
 Default uninstall stops the daemon and retains the index/model cache. `--purge`
@@ -327,8 +327,7 @@ history. Six tools are available:
 and optional Context `parent_session_id`. Persist the binding key for a conversation
 and reuse the same metadata on retry/resume. New conversations and forks get new
 keys. Context generates and stores its own random session UUID; imported Codex
-session IDs are provenance only. The lifecycle hook that persists/injects this
-binding and the skill that guides intelligent updates are deferred. MCP server
+session IDs are provenance only. The SessionStart hook persists/injects this binding, and the installed skill guides tagged updates. MCP server
 startup alone does not identify a Codex conversation.
 
 For `log_update`, pass the returned `session_id`, a new UUID `update_id`, `text`,
@@ -388,6 +387,94 @@ and doctor still fail after the skill is removed. Uninstall uses the recorded
 root even when the current `CODEX_HOME` differs.
 
 The skill teaches scoped history retrieval, timezone boundaries, source citations,
-coverage limitations, and historical text as evidence. Automatic session binding
-and intelligent tagged updates remain separate work. Canonical-prompt behavioral
+coverage limitations, and historical text as evidence. SessionStart binding and intelligent tagged updates are described below. Canonical-prompt behavioral
 acceptance remains the final onboarding ticket; discovery tests do not claim it.
+
+
+### Trusted lifecycle capture and tagged updates
+
+```sh
+blctx install codex --step codex_hooks
+```
+
+Use the same `blctx` installation/environment throughout this test: registration
+contains its absolute interpreter path. Switching environments changes the hook
+definition and can require another Codex review.
+
+This registers three owned commands in `$CODEX_HOME/hooks.json`, installs the
+skill/MCP prerequisites, and checks their actual state. **The first install exits
+1 while Codex trust is pending.** In Codex, open `/hooks`, inspect the three Context
+commands, and trust them. Start a new conversation afterward. Context never sets
+trust, bypasses it, or marks a pending review green. Hook handler changes require
+reinstallation and review of the changed command definition.
+
+| Event | Action |
+| --- | --- |
+| SessionStart | Persist a binding UUID and instruct the agent to call `open_session` before work; reuse the binding after resume/compaction |
+| Stop | Persist a deduplicated catch-up event; never request another model continuation |
+| SessionEnd | Persist a final catch-up event; never hold the conversation open |
+
+Hook handlers write only small SQLite records, with bounded lock waits and a
+2-second Codex timeout. Errors return advisory output, allowing work to continue.
+No model or embedding runs in a hook. The daemon checks registered transcript
+snapshots every two seconds and reuses unchanged chunk embeddings. The transcript
+is reparsed for classification; this first version does not implement a streaming
+parser. No other history is automatically enrolled.
+
+The Codex event ID is a lookup hint scoped to CODEX_HOME. Context generates its
+own binding and session UUIDs. Different event session IDs (including forks) get
+new bindings. Missing event IDs are rejected rather than guessed. A null
+transcript path retains the event pending a usable path; capture cannot promise
+transcript recovery for ephemeral/no-transcript conversations. `SessionEnd`
+delivery does not cover crashes, so the daemon also reconciles registered files
+without another hook event.
+
+The skill saves visible progress with useful tags through `log_update`, using
+`source_text` to associate an exact visible message with captured transcript
+references. Matching is within a Context session; repeated identical source text
+can share references. New summaries omit source_text and remain distinct authored
+notes. Private thinking, raw tool traffic, and setup instructions are excluded.
+User requests such as “index/tag our recent work” use this same skill and MCP.
+
+Session/update storage acknowledgements bypass the embedding worker. SQLite WAL
+mode prevents long recovery read snapshots from blocking those writes. Acknowledged
+updates are durable and may still await semantic indexing. Existing imported
+files retain their prior selection until explicitly reindexed; coverage reports
+outdated selection. New capture includes visible progress by default.
+
+Local smoke test, after trusting the hooks:
+
+1. Start a **new** Codex conversation in a small test project.
+2. Ask: “Give a short progress update about reviewing the sensor integration,
+   save it with useful tags using Context, then tell me the Context session ID.”
+3. Ask: “Index/tag our recent work with `sensors` and `review`.”
+4. Ask Context to retrieve that work and inspect timestamps, tags, source
+   references, and the distinction between a visible update and a summary.
+5. Close the test conversation normally (or archive it). SessionEnd can be delayed
+   while a conversation remains open in another client.
+6. Run `blctx doctor --step codex_hooks --json`. Green requires all three event
+   types to have arrived, indexed content, and no pending/failed capture. Inspect
+   `blctx index-status` (`capture` field) for backlog, null paths, and errors.
+
+Resume the test conversation and confirm the Context ID stays the same. Fork it
+and confirm the new conversation receives a different ID. Compact and continue to
+confirm the hook restores the existing binding. Subagent-specific lifecycle
+hooks are not installed in this first version.
+
+For uninstall review, use an isolated HOME/CODEX_HOME/XDG environment; do not
+uninstall your working installation merely to run a test. `blctx uninstall codex`
+removes owned hook groups, then the skill/MCP/service. It preserves other hook
+entries and refuses modified Context commands. An old in-flight handler cannot
+enqueue after removal, and capture checks installation generation before commit.
+Reinstalling requires review of its new hook generation. Inline `[hooks]` config
+is preserved with an actionable conflict; consolidate it into hooks.json first.
+
+```sh
+python -m pytest -q
+BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
+```
+
+Automated tests use isolated hook roots and never grant trust. They distinguish
+synthetic handler/recovery tests from fresh Codex discovery and real trusted
+client delivery. Full installer UX and the remaining onboarding checks are still
+separate acceptance work.

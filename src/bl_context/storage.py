@@ -112,13 +112,25 @@ def sync_directory(path):
 
 
 @contextmanager
-def locked(paths):
+def locked(paths, timeout=None):
     # Lock an existing directory: no lock file, and verification never creates it.
     import fcntl
     private(paths['state'], directory=True)
     fd = os.open(paths['state'], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        if timeout is None:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+        else:
+            import time
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError('Context ownership lock is busy') from None
+                    time.sleep(.01)
         yield
     finally:
         os.close(fd)
@@ -240,6 +252,13 @@ def uninstall(purge=False):
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)
+            if manifest.get('sqlite_wal'):
+                for suffix in ('-wal', '-shm'):
+                    sidecar = Path(str(database_path(paths)) + suffix)
+                    safe_path(sidecar)
+                    if sidecar.exists():
+                        private(sidecar)
+                        sidecar.unlink()
             db = database_path(paths)
             safe_path(db)
             if db.exists():
@@ -319,3 +338,19 @@ def purge_index_artifacts(paths, manifest):
             directory.rmdir()
         except OSError:
             pass
+
+
+def prepare_sqlite_wal(paths):
+    """Reserve SQLite's standard WAL sidecars before changing journal mode."""
+    with locked(paths):
+        manifest = read_manifest(paths)
+        for suffix in ('-wal', '-shm'):
+            path = Path(str(database_path(paths)) + suffix)
+            safe_path(path)
+            if path.exists():
+                if not manifest.get('sqlite_wal'):
+                    raise RuntimeError(f'Refusing unowned SQLite sidecar: {path}')
+                private(path)
+        if not manifest.get('sqlite_wal'):
+            manifest['sqlite_wal'] = True
+            atomic_manifest(paths, manifest)

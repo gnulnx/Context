@@ -33,7 +33,7 @@ def test_json_failures_and_no_changes(args, tmp_path, monkeypatch):
         assert data["ready"] is False
         assert data["exit_code"] == 1
         assert all(c["status"] == "failed" for c in data["checks"])
-        assert all(c["summary"] in ("Not implemented", "Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable", "Codex skill unavailable")
+        assert all(c["summary"] in ("Not implemented", "Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable", "Codex skill unavailable", "Codex hooks unavailable")
                    for c in data["checks"])
         assert all(c["duration"] >= 0 for c in data["checks"])
     assert list(tmp_path.iterdir()) == [sentinel]

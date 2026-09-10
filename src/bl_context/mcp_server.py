@@ -51,9 +51,9 @@ def create_server(installation_id):
         return request('open_session', binding_key=binding_key, project=project, parent_session_id=parent_session_id)
 
     @server.tool(annotations=write)
-    def log_update(session_id: str, update_id: str, text: Annotated[str, Field(min_length=1, max_length=16000)], tags: list[str] | None = None, kind: Literal['status', 'decision', 'note'] = 'status', authorship: Literal['agent_generated', 'user_requested'] = 'agent_generated') -> dict[str, Any]:
-        """Append a tagged authored update to a Context session. Generate update_id as a UUID once per update and reuse it on retries. user_requested means the agent reports an explicit request, not independent user verification. Returns durable ID and vector indexing state."""
-        return request('log_update', session_id=session_id, update_id=update_id, text=text, tags=tags or [], kind=kind, authorship=authorship)
+    def log_update(session_id: str, update_id: str, text: Annotated[str, Field(min_length=1, max_length=16000)], tags: list[str] | None = None, kind: Literal['status', 'decision', 'note'] = 'status', authorship: Literal['agent_generated', 'user_requested'] = 'agent_generated', source_text: Annotated[str, Field(min_length=1, max_length=16000)] | None = None) -> dict[str, Any]:
+        """Append a tagged authored update to a Context session. Generate update_id as a UUID once per update and reuse it on retries. user_requested means the agent reports an explicit request, not independent user verification. For a visible progress message, source_text is its exact text and links captured transcript evidence without duplicate search results. Omit it for a new summary. Returns durable ID and vector indexing state."""
+        return request('log_update', session_id=session_id, update_id=update_id, text=text, tags=tags or [], kind=kind, authorship=authorship, source_text=source_text)
 
     return server
 

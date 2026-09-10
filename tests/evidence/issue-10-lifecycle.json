@@ -1,0 +1,619 @@
+{
+  "scope": "Isolated CLI lifecycle without granting or fabricating trust. Pending trust must stay red. Real trusted client delivery is recorded separately.",
+  "records": [
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-hook-lifecycle-1y7fsq52/data/bl-context'",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.01219340693205595,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [
+          "data_directory",
+          "background_service",
+          "codex_mcp",
+          "codex_skills"
+        ],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.06486027874052525,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2137829).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.3248321102000773,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "passed",
+            "summary": "Owned Codex MCP registration and absolute executable verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.09607297694310546,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "passed",
+            "summary": "Codex skill base-layer-context v0.2.0 content and ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.026861086953431368,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.4687875579111278,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [
+          "data_directory",
+          "background_service",
+          "codex_mcp",
+          "codex_skills"
+        ],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.017937927041202784,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2137829).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.281164743937552,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "passed",
+            "summary": "Owned Codex MCP registration and absolute executable verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.07178190490230918,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "passed",
+            "summary": "Codex skill base-layer-context v0.2.0 content and ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.019472660031169653,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.25225749611854553,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.23273515002802014,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "uninstall",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.5175577630288899,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.012502359692007303,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.012891605030745268,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [
+          "data_directory",
+          "background_service",
+          "codex_mcp",
+          "codex_skills"
+        ],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.021870939061045647,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2138557).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.3227375680580735,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "passed",
+            "summary": "Owned Codex MCP registration and absolute executable verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.10246992576867342,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "passed",
+            "summary": "Codex skill base-layer-context v0.2.0 content and ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.02366701513528824,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.25731982197612524,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [
+          "data_directory",
+          "background_service",
+          "codex_mcp",
+          "codex_skills"
+        ],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.02165626734495163,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2138557).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.279306354932487,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "passed",
+            "summary": "Owned Codex MCP registration and absolute executable verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.07365653803572059,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "passed",
+            "summary": "Codex skill base-layer-context v0.2.0 content and ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.015934209804981947,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.23767952993512154,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.23777656583115458,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "uninstall",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.5137291280552745,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.012499426957219839,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "codex_hooks",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "codex_hooks",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Codex hooks unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "duration": 0.012543461751192808,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    }
+  ]
+}

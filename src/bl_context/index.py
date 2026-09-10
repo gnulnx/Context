@@ -1,6 +1,6 @@
 """Daemon-owned local retrieval. SQLite is authoritative; Qdrant is rebuildable."""
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, nullcontext
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -15,7 +15,7 @@ from .preview import preview
 
 MODEL = 'BAAI/bge-small-en'
 COLLECTION = 'context_v1'
-POLICY = 'preview-v1-token384-overlap48'
+POLICY = 'preview-v2-visible-token384-overlap48'
 
 
 def utcnow():
@@ -36,12 +36,15 @@ def epoch(value):
 class Index:
     def __init__(self, paths):
         self.paths = paths
+        storage.prepare_sqlite_wal(paths)
         self.database = storage.database_path(paths)
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='context-index')
         self.model = None
         self.vectors = None
         self.stopping = threading.Event()
+        self.write_lock = threading.RLock()
         with closing(self.connect()) as db, db:
+            db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS context_sessions (
                     id TEXT PRIMARY KEY, binding_key TEXT UNIQUE NOT NULL, project TEXT,
@@ -73,10 +76,12 @@ class Index:
                 if table == 'context_chunks':
                     migrated_chunks = migrated
             if migrated_chunks:
-                db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty','1')")
+                db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex,))
             configuration = json.dumps({'model': MODEL, 'policy': POLICY, 'dimensions': 384}, sort_keys=True)
             row = db.execute("SELECT value FROM index_settings WHERE key='configuration'").fetchone()
-            if row and row[0] != configuration:
+            if row and json.loads(row[0]) == {'model': MODEL, 'policy': 'preview-v1-token384-overlap48', 'dimensions': 384}:
+                db.execute("UPDATE index_settings SET value=? WHERE key='configuration'", (configuration,))
+            elif row and row[0] != configuration:
                 raise RuntimeError('Index model or policy changed; explicit rebuild is required')
             db.execute("INSERT OR IGNORE INTO index_settings VALUES ('configuration', ?)", (configuration,))
             pending = db.execute("SELECT id FROM ingest_jobs WHERE state IN ('queued','running')").fetchall()
@@ -103,8 +108,14 @@ class Index:
                            (identifier, 'queued', json.dumps(sorted(set(sources))), utcnow(), utcnow(), '{}'))
             self.executor.submit(self.run_job, identifier)
             return {'job_id': identifier, 'state': 'queued'}
+        if operation in ('open_session', 'log_update'):
+            with self.write_lock:
+                return self.open_session(request) if operation == 'open_session' else self.log_update(request)
         if operation == 'index_status':
-            return self.status(request.get('job_id'))
+            result = self.status(request.get('job_id'))
+            from .capture import status
+            result['capture'] = status(self.paths)
+            return result
         return self.executor.submit(self.query, request).result(timeout=30)
 
     def status(self, job_id=None):
@@ -119,7 +130,8 @@ class Index:
                 source['report'] = json.loads(source['report'])
                 try:
                     current = Path(source['path']).stat()
-                    source['changed_since_index'] = current.st_size != source['bytes'] or current.st_mtime_ns != source['report'].get('source_mtime_ns')
+                    source['selection_outdated'] = source['report'].get('selection') != 'visible-progress-v1'
+                    source['changed_since_index'] = source['selection_outdated'] or current.st_size != source['bytes'] or current.st_mtime_ns != source['report'].get('source_mtime_ns')
                     source['missing'] = False
                 except OSError:
                     source['missing'] = True
@@ -189,21 +201,22 @@ class Index:
             self.set_dirty(True)
         with closing(self.connect()) as db:
             dirty = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()
-        if dirty and dirty[0] == '1':
+        if dirty and dirty[0] != '0':
             self.vectors.delete_collection(COLLECTION)
             self.vectors.create_collection(COLLECTION, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
             with closing(self.connect()) as db:
                 cursor = db.execute('SELECT * FROM context_chunks')
                 while batch := cursor.fetchmany(64):
                     self.vectors.upsert(COLLECTION, [models.PointStruct(id=r['id'], vector=json.loads(r['vector']), payload=json.loads(r['document'])) for r in batch])
-            self.set_dirty(False)
+            with closing(self.connect()) as db, db:
+                db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (dirty[0],))
         storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
         self.vector_baseline = {str(p.relative_to(self.paths['data'] / 'vectors')) for p in (self.paths['data'] / 'vectors').rglob('*') if not p.is_dir()}
         return self.vectors
 
     def set_dirty(self, value):
         with closing(self.connect()) as db, db:
-            db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", ('1' if value else '0',))
+            db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex if value else '0',))
 
     def run_job(self, job_id):
         with closing(self.connect()) as db, db:
@@ -224,7 +237,7 @@ class Index:
             db.execute('UPDATE ingest_jobs SET state=?,result=?,updated=? WHERE id=?',
                        ('partial' if partial else 'complete', json.dumps(report), utcnow(), job_id))
 
-    def index_file(self, path):
+    def index_file(self, path, context_session_id=None, capture_generation=None):
         from qdrant_client import models
         storage.safe_path(path)
         data = preview(path, 1, 2**63, details=True)
@@ -246,7 +259,9 @@ class Index:
             raise RuntimeError('Source changed during import; retry')
         with closing(self.connect()) as db:
             previous = db.execute('SELECT * FROM indexed_sources WHERE path=?', (str(path),)).fetchone()
-        if previous and previous['digest'] == fingerprint:
+        if previous and context_session_id is None:
+            context_session_id = json.loads(previous['report']).get('context_session_id')
+        if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == 'visible-progress-v1':
             return {**json.loads(previous['report']), 'unchanged': True}
         session_id = data['metadata'].get('session_id') or data['metadata'].get('id') or str(path)
         replaced_sources = [str(path)]
@@ -274,44 +289,76 @@ class Index:
                     timestamp = None
                 doc = {'id': identifier, 'context_id': context_id, 'session_id': session_id,
                        'source_type': 'codex_transcript', 'source_session_id': session_id,
+                       'context_session_id': context_session_id,
                        'turn_id': turn['turn_id'], 'project': turn['project'],
                        'timestamp': record['timestamp'], 'timestamp_epoch': timestamp,
                        'role': record['role'], 'phase': record['phase'], 'text': record['text'],
                        'decision': record['decision'], 'source': {'path': str(path), 'line': record['line'], 'byte_offset': record['byte_offset']}}
+                if context_session_id and record['role'] == 'assistant':
+                    with closing(self.connect()) as db:
+                        note = db.execute("SELECT id FROM context_messages WHERE json_extract(document,'$.context_session_id')=? AND json_extract(document,'$.source_type')='authored_update' AND json_extract(document,'$.source_text')=? ORDER BY timestamp DESC LIMIT 1", (context_session_id, record['text'])).fetchone()
+                    if note:
+                        doc['decision'] = 'context_only'
+                        doc['duplicate_of'] = note['id']
                 messages.append((identifier, str(path), context_id, record['line'], timestamp, turn['project'], json.dumps(doc)))
-                if record['decision'] == 'index':
+                if doc['decision'] == 'index':
                     for left, right, text in self.chunk_text(record['text']):
                         chunk_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f'{identifier}:{left}:{right}:{hashlib.sha256(text.encode()).hexdigest()}'))
                         chunks.append({'id': chunk_id, 'document': {**doc, 'text': text, 'char_start': left, 'char_end': right, 'chunk_id': chunk_id}})
         vectors = self.open_vectors()
         self.set_dirty(True)
+        with closing(self.connect()) as db:
+            vector_revision = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()[0]
         rows = []
         for start in range(0, len(chunks), 32):
             batch = chunks[start:start+32]
-            embeddings = list(self.load_model().passage_embed([c['document']['text'] for c in batch], batch_size=32))
+            placeholders = ','.join('?' for _ in batch)
+            with closing(self.connect()) as db:
+                cached = {r['id']:json.loads(r['vector']) for r in db.execute(
+                    f'SELECT id,vector FROM context_chunks WHERE id IN ({placeholders})', [c['id'] for c in batch])}
+            missing = [c for c in batch if c['id'] not in cached]
+            if missing:
+                embeddings = self.load_model().passage_embed([c['document']['text'] for c in missing], batch_size=32)
+                cached.update({chunk['id']:vector.tolist() for chunk,vector in zip(missing,embeddings,strict=True)})
             points = []
-            for chunk, vector in zip(batch, embeddings, strict=True):
-                values = vector.tolist()
+            for chunk in batch:
+                values = cached[chunk['id']]
                 rows.append((chunk['id'], str(path), json.dumps(chunk['document']), json.dumps(values)))
                 points.append(models.PointStruct(id=chunk['id'], vector=values, payload=chunk['document']))
             vectors.upsert(COLLECTION, points)
         report = {'path': str(path), 'session_id': session_id, 'messages': len(messages), 'chunks': len(chunks),
                   'snapshot_bytes': size, 'source_mtime_ns': before.st_mtime_ns, 'unclassified': data['counts'].get('unclassified', 0),
-                  'counts': data['counts'], 'unchanged': False}
-        with closing(self.connect()) as db, db:
-            old = set()
-            for replaced in replaced_sources:
-                old.update(r[0] for r in db.execute('SELECT id FROM context_chunks WHERE source=?', (replaced,)))
-                db.execute('DELETE FROM context_messages WHERE source=?', (replaced,))
-                db.execute('DELETE FROM context_chunks WHERE source=?', (replaced,))
-                db.execute('DELETE FROM indexed_sources WHERE path=?', (replaced,))
-            db.executemany('INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)', messages)
-            db.executemany('INSERT INTO context_chunks VALUES (?,?,?,?)', rows)
-            db.execute('INSERT OR REPLACE INTO indexed_sources VALUES (?,?,?,?,?)', (str(path), fingerprint, size, utcnow(), json.dumps(report)))
-        obsolete = list(old - {r[0] for r in rows})
+                  'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': 'visible-progress-v1'}
+        with (storage.locked(self.paths) if capture_generation else nullcontext()):
+            if capture_generation:
+                current = storage.read_manifest(self.paths)
+                if current['state'] != 'active' or current.get('codex_hooks', {}).get('generation') != capture_generation:
+                    raise RuntimeError('Capture disconnected during indexing')
+            with closing(self.connect()) as db, db:
+                old = set()
+                for replaced in replaced_sources:
+                    old.update(r[0] for r in db.execute('SELECT id FROM context_chunks WHERE source=?', (replaced,)))
+                    db.execute('DELETE FROM context_messages WHERE source=?', (replaced,))
+                    db.execute('DELETE FROM context_chunks WHERE source=?', (replaced,))
+                    db.execute('DELETE FROM indexed_sources WHERE path=?', (replaced,))
+                db.executemany('INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)', messages)
+                db.executemany('INSERT INTO context_chunks VALUES (?,?,?,?)', rows)
+                if context_session_id:
+                    aliases = db.execute("SELECT m.id,m.document,n.id AS note_id FROM context_messages m JOIN context_messages n ON json_extract(n.document,'$.source_type')='authored_update' AND json_extract(n.document,'$.context_session_id')=? AND json_extract(n.document,'$.source_text')=json_extract(m.document,'$.text') WHERE m.source=? AND json_extract(m.document,'$.role')='assistant'", (context_session_id,str(path))).fetchall()
+                    for alias in aliases:
+                        document = json.loads(alias['document'])
+                        document.update(decision='context_only',duplicate_of=alias['note_id'])
+                        db.execute('UPDATE context_messages SET document=? WHERE id=?',(json.dumps(document),alias['id']))
+                        db.execute("DELETE FROM context_chunks WHERE json_extract(document,'$.id')=?", (alias['id'],))
+
+                db.execute('INSERT OR REPLACE INTO indexed_sources VALUES (?,?,?,?,?)', (str(path), fingerprint, size, utcnow(), json.dumps(report)))
+        with closing(self.connect()) as db:
+            actual = {r[0] for r in db.execute('SELECT id FROM context_chunks WHERE source=?',(str(path),))}
+        obsolete = list((old | {r[0] for r in rows}) - actual)
         if obsolete:
             vectors.delete(COLLECTION, models.PointIdsList(points=obsolete))
-        self.set_dirty(False)
+        with closing(self.connect()) as db, db:
+            db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (vector_revision,))
         storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
         return report
 
@@ -349,19 +396,25 @@ class Index:
         tags = request.get('tags') or []
         kind = request.get('kind', 'status')
         authorship = request.get('authorship', 'agent_generated')
+        source_text = request.get('source_text')
+        if source_text is not None and (not isinstance(source_text, str) or not source_text.strip() or len(source_text) > 16000):
+            raise ValueError('source_text must be exact visible message text, at most 16000 characters')
         if not isinstance(text, str) or not text.strip() or len(text) > 16000:
             raise ValueError('Update text must contain 1..16000 characters')
         if not isinstance(tags, list) or len(tags) > 20 or any(not isinstance(t, str) or not t.strip() or len(t) > 64 for t in tags):
             raise ValueError('Provide at most 20 nonempty tags of at most 64 characters')
         if kind not in ('status', 'decision', 'note') or authorship not in ('agent_generated', 'user_requested'):
             raise ValueError('Invalid kind or authorship')
-        payload = json.dumps(dict(session_id=session, text=text, tags=sorted(set(tags)), kind=kind, authorship=authorship), sort_keys=True)
+        payload = json.dumps(dict(session_id=session, text=text, tags=sorted(set(tags)), kind=kind, authorship=authorship, source_text=source_text), sort_keys=True)
         with closing(self.connect()) as db, db:
             owner = db.execute('SELECT * FROM context_sessions WHERE id=?', (session,)).fetchone()
             if not owner:
                 raise ValueError('Unknown Context session; call open_session first')
             previous = db.execute('SELECT * FROM authored_updates WHERE id=?', (identifier,)).fetchone()
-            if previous and previous['payload'] != payload:
+            previous_payload = json.loads(previous['payload']) if previous else None
+            if previous_payload is not None:
+                previous_payload.setdefault('source_text', None)
+            if previous and previous_payload != json.loads(payload):
                 raise ValueError('Update ID already exists with different content')
             if not previous:
                 now = utcnow()
@@ -369,10 +422,21 @@ class Index:
                            source_type='authored_update', source={'update_id': identifier},
                            timestamp=now, timestamp_epoch=epoch(now), project=owner['project'],
                            role='assistant', phase=None, text=text, tags=sorted(set(tags)),
-                           kind=kind, authorship=authorship, decision='index')
+                           kind=kind, authorship=authorship, source_text=source_text, decision='index')
                 db.execute('INSERT INTO authored_updates VALUES (?,?,?,NULL)', (identifier, payload, 'pending'))
                 db.execute('INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)',
                            (identifier, 'update:'+identifier, identifier, 0, epoch(now), owner['project'], json.dumps(doc)))
+        if source_text is not None:
+            # Fast SQL-only aliasing; vector repair is scheduled on the embedding worker.
+            with closing(self.connect()) as db, db:
+                rows = db.execute("SELECT id,document FROM context_messages WHERE json_extract(document,'$.source_type')='codex_transcript' AND json_extract(document,'$.context_session_id')=? AND json_extract(document,'$.role')='assistant' AND json_extract(document,'$.text')=?", (session,source_text)).fetchall()
+                for row in rows:
+                    document = json.loads(row['document'])
+                    document.update(decision='context_only', duplicate_of=identifier)
+                    db.execute('UPDATE context_messages SET document=? WHERE id=?',(json.dumps(document),row['id']))
+                    db.execute("DELETE FROM context_chunks WHERE json_extract(document,'$.id')=?", (row['id'],))
+                if rows:
+                    db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex,))
         # Persist the note before scheduling embeddings; downloads never delay acknowledgement.
         self.executor.submit(self.embed_update, identifier)
         with closing(self.connect()) as db:
@@ -400,12 +464,17 @@ class Index:
                 payload = {**doc, 'text': text, 'char_start': left, 'char_end': right, 'chunk_id': chunk_id}
                 vector = next(self.load_model().passage_embed([text])).tolist()
                 rows.append((chunk_id, 'update:'+identifier, json.dumps(payload), json.dumps(vector)))
+            vectors = self.open_vectors()
+            revision = uuid.uuid4().hex
             with closing(self.connect()) as db, db:
                 db.executemany('INSERT OR REPLACE INTO context_chunks VALUES (?,?,?,?)', rows)
-                db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty','1')")
-            self.open_vectors()  # Recover the derived vector store from committed SQLite rows.
+                db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (revision,))
+            from qdrant_client import models
+            vectors.upsert(COLLECTION, [models.PointStruct(id=r[0],vector=json.loads(r[3]),payload=json.loads(r[2])) for r in rows])
             with closing(self.connect()) as db, db:
+                db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (revision,))
                 db.execute("UPDATE authored_updates SET state='indexed',error=NULL WHERE id=?", (identifier,))
+            storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
         except Exception as exc:
             with closing(self.connect()) as db, db:
                 db.execute("UPDATE authored_updates SET state='pending',error=? WHERE id=?", (str(exc), identifier))
@@ -465,6 +534,16 @@ class Index:
                 vector = next(self.load_model().query_embed(query)).tolist()
                 points = self.open_vectors().query_points(COLLECTION, query=vector, query_filter=models.Filter(must=filters) if filters else None, limit=limit+1, offset=offset).points
                 documents = [{**p.payload, 'score': p.score} for p in points]
+        with closing(self.connect()) as db:
+            def attach(document):
+                for message in document.get('messages', []):
+                    attach(message)
+                if document.get('source_type') == 'authored_update':
+                    references = db.execute("SELECT document FROM context_messages WHERE json_extract(document,'$.duplicate_of')=? LIMIT 21", (document['id'],)).fetchall()
+                    document['source_references'] = [{'context_id':d['context_id'], 'timestamp':d.get('timestamp'), **d['source']} for r in references[:20] for d in [json.loads(r[0])]]
+                    document['source_references_truncated'] = len(references) > 20
+            for document in documents:
+                attach(document)
         more = len(documents) > limit
         documents = documents[:limit]
         # Bound text without silently representing excerpts as complete messages.
