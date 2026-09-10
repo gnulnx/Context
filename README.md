@@ -2,9 +2,9 @@
 
 Persistent context for coding agents.
 
-This repository currently contains the pre-development Python package that
-reserves the `bl-context` name and its release infrastructure. Product
-functionality has not been implemented yet.
+This repository contains the Python package, onboarding CLI, and the first
+local installation step. Historical recall and agent integrations are still
+under development.
 
 ## Install
 
@@ -20,10 +20,10 @@ print(bl_context.__version__)
 
 ## CLI development preview
 
-The feature branch defines the onboarding experience using Click and Rich.
-Every integration check is intentionally unimplemented and reports failure.
+The onboarding CLI uses Click and Rich. The data directory step is implemented
+and tested on Linux; the remaining integration checks report failure.
 No services, models, Codex settings, skills, hooks, or indexes are installed.
-The published 0.0.1 package does not contain this CLI yet.
+Use the checkout installation below to test this development version.
 
 ```console
 python -m venv .venv
@@ -37,7 +37,9 @@ blctx uninstall codex
 python -m pytest -q
 ```
 
-All four operational commands currently exit with code 1 and report `Not ready.`
+Full install, status, and doctor currently exit 1 because integrations remain
+unimplemented. Selected data checks exit 0 after installation. Uninstall exits 0
+when installation ownership is deactivated.
 Usage errors exit with code 2; help exits with code 0. `--json` emits only a
 structured report, including ordered checks and the exit code. `--no-color`
 disables colors. Both output flags work before the command or after its arguments.
@@ -73,7 +75,51 @@ Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp
 `codex_skills`, `codex_hooks`, `embedding_model`, `session_discovery`,
 `history_index`, `service_health`, `mcp_health`, `history_retrieval`.
 
-Production steps remain unimplemented in this foundation ticket. The subprocess
-acceptance test uses an explicitly test-only file-backed implementation to prove
-selected success and red/green/disconnect/red/reinstall behavior. It does not
-claim that the product installer or uninstaller is implemented.
+The data step has a real subprocess acceptance test covering install, status,
+doctor, uninstall, reinstall and purge. The execution foundation also retains
+a test-only file-backed fixture for generic dependency behavior.
+
+
+### Private local installation (Linux)
+
+`blctx install codex --step data_directory` creates these user directories with
+mode `0700`, respecting absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`,
+`XDG_CACHE_HOME`, and `XDG_STATE_HOME` overrides:
+
+| Purpose | Default path |
+| --- | --- |
+| Data | `~/.local/share/bl-context` |
+| Configuration | `~/.config/bl-context` |
+| Cache | `~/.cache/bl-context` |
+| State | `~/.local/state/bl-context` |
+
+The data directory contains `context.db`, initialized atomically with schema
+version 1 and an installation identifier. The state directory contains a
+versioned `installation.json` recording active ownership, owned files and
+created directories, and absolute interpreter/CLI paths for later service use.
+Both files have mode `0600`. Reinstall retains the installation identifier and
+existing data. An interrupted initial schema creation can be retried.
+
+Status and doctor require private writable directories, a valid schema matching
+the manifest, active ownership, and available recorded executables. They do not
+repair permissions or recreate missing state. Existing unowned databases,
+unsupported manifests, symbolic links, and unsafe permissions fail with diagnostics
+instead of being overwritten or silently adopted.
+
+`blctx uninstall codex` deactivates the manifest and retains data/cache. Retained
+files alone do not pass verification. `blctx uninstall codex --purge` removes only
+the two explicitly owned files and empty directories created by Context. Unknown
+files, pre-existing directories, original Codex transcripts, and unrelated
+configuration are preserved. Service and Codex integration removal will be added
+with those features; this version installs neither.
+
+To exercise the real lifecycle without changing your normal user installation:
+
+```sh
+python -m pytest -q tests/test_storage.py
+```
+
+The test runs the installed `blctx` entry point from `/` with an isolated HOME,
+checks red → green → uninstall → red → reinstall → green, verifies idempotence
+and preservation, and exercises purge. Full readiness stays false while the
+remaining integrations are unimplemented.

@@ -1,0 +1,931 @@
+{
+  "environment": "Isolated HOME, Linux, real installed blctx entry point; cwd=/",
+  "preservation": "Original transcripts, unrelated config and unknown cache file preserved. Status/doctor snapshots unchanged.",
+  "records": [
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.003492991905659437,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.0033673830330371857,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.07302215415984392,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.018034742679446936,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.005487054120749235,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.005265882238745689,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.026446224190294743,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 3.736000508069992e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 2.634245902299881e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.943204551935196e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.2521632015705109e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.0919757187366486e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.051928848028183e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "session_discovery, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.4621764421463013e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "service_health",
+            "label": "Service healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.201871782541275e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "mcp_health",
+            "label": "MCP connection healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "codex_mcp, service_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.1119991540908813e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_retrieval",
+            "label": "Historical memory retrieval verified",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "history_index, mcp_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 9.51811671257019e-07,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "uninstall",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.015249403193593025,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.0036726309917867184,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.004525430966168642,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.026669098064303398,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.01789439097046852,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.005442916881293058,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.006395887117832899,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": false,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.026062908582389355,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 3.9460137486457825e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_mcp",
+            "label": "Codex MCP registered",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 2.5439076125621796e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_skills",
+            "label": "Codex skills installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.8230639398097992e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "codex_hooks",
+            "label": "Codex hooks installed",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.232139766216278e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 1.0807998478412628e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Not implemented",
+            "diagnostic": "This release defines the CLI contract only.",
+            "remediation": "Review the development roadmap; rerunning cannot repair this yet.",
+            "duration": 9.32253897190094e-07,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "session_discovery, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.482199877500534e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "service_health",
+            "label": "Service healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "background_service, embedding_model",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.1217780411243439e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "mcp_health",
+            "label": "MCP connection healthy",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "codex_mcp, service_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.0319054126739502e-06,
+            "skip_reason": null,
+            "dependency": false
+          },
+          {
+            "step_id": "history_retrieval",
+            "label": "Historical memory retrieval verified",
+            "status": "failed",
+            "summary": "Prerequisites unavailable",
+            "diagnostic": "history_index, mcp_health",
+            "remediation": "Resolve the failed prerequisite checks first.",
+            "duration": 1.0416842997074127e-06,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "uninstall",
+        "codex",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.015151294879615307,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.0038016950711607933,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.0038445289246737957,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "uninstall",
+        "codex",
+        "--purge",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Owned data purged; unrelated files preserved.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.025073012802749872,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "status",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.0036461222916841507,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "doctor",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 1,
+      "json": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "failed",
+            "summary": "Data installation unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
+            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "duration": 0.00394515972584486,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "blctx",
+        "install",
+        "codex",
+        "--step",
+        "data_directory",
+        "--json"
+      ],
+      "exit_code": 0,
+      "json": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.07807235326617956,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 """Click commands and Rich rendering for the intentionally red CLI."""
 
 import json
+from dataclasses import replace
 
 import click
 from rich.console import Console
@@ -22,14 +23,15 @@ def main(ctx, json_output, no_color):
     ctx.obj.update(json_output=json_output, no_color=no_color)
 
 
-def report(command, json_output, no_color, *, no_history=False, step=None):
+def report(command, json_output, no_color, *, no_history=False, step=None, purge=False):
     ctx = click.get_current_context()
     json_output = json_output or ctx.obj["json_output"]
     no_color = no_color or ctx.obj["no_color"]
     try:
         results = run_checks(
-            **({"steps": UNINSTALL_STEPS} if command == "uninstall" else {}),
-            install=command == "install", no_history=no_history, selected_step=step,
+            **({"steps": tuple(replace(s, purge=True) for s in UNINSTALL_STEPS)
+               if purge else UNINSTALL_STEPS} if command == "uninstall" else {}),
+            install=command in ("install", "uninstall"), no_history=no_history, selected_step=step,
         )
     except ValueError as exc:
         raise click.UsageError(str(exc)) from exc
@@ -60,7 +62,9 @@ def report(command, json_output, no_color, *, no_history=False, step=None):
                 console.print("   Prerequisite for selected step.\n")
             if command == "doctor":
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
-        if step:
+        if command == "uninstall" and success:
+            console.print(" Uninstalled.")
+        elif step:
             console.print(" Selected check passed. Full readiness not evaluated."
                           if success else " Selected check failed. Not ready.")
         else:
@@ -74,7 +78,7 @@ def report(command, json_output, no_color, *, no_history=False, step=None):
 @click.option("--no-history", is_flag=True, help="Skip historical discovery, indexing, and verification.")
 @output_options
 def install(agent, no_history, json_output, no_color, step):
-    """Install an agent integration (currently unimplemented)."""
+    """Install an agent integration, or one selected step."""
     report("install", json_output, no_color, no_history=no_history, step=step)
 
 
@@ -92,13 +96,14 @@ def status(json_output, no_color, step, no_history):
 @click.option("--no-history", is_flag=True, help="Skip explicit history checks.")
 @output_options
 def doctor(json_output, no_color, step, no_history):
-    """Explain failed checks (currently all unimplemented)."""
+    """Explain readiness and failed checks."""
     report("doctor", json_output, no_color, step=step, no_history=no_history)
 
 
 @main.command()
 @click.argument("agent", type=click.Choice(["codex"]))
 @output_options
-def uninstall(agent, json_output, no_color):
-    """Uninstall shell; currently removes nothing and reports failure."""
-    report("uninstall", json_output, no_color)
+@click.option("--purge", is_flag=True, help="Remove explicitly owned Context data; preserve unknown files.")
+def uninstall(agent, json_output, no_color, purge):
+    """Deactivate installation ownership, retaining data unless --purge is given."""
+    report("uninstall", json_output, no_color, purge=purge)

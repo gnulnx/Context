@@ -1,4 +1,4 @@
-"""The onboarding contract. All production checks intentionally fail for now."""
+"""Onboarding steps, independent verifiers, and focused execution."""
 
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
@@ -46,8 +46,41 @@ class Step:
         )
 
 
+class DataDirectoryStep(Step):
+    def install(self):
+        from . import storage
+        storage.install()
+
+    def verify(self):
+        from . import storage
+        try:
+            summary = storage.verify()
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, summary)
+        except Exception as exc:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.FAILED, "Data installation unavailable",
+                diagnostic=str(exc),
+                remediation="Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            )
+
+
+@dataclass(frozen=True)
+class UninstallStep(Step):
+    purge: bool = False
+
+    def install(self):
+        from . import storage
+        storage.uninstall(purge=self.purge)
+
+    def verify(self):
+        from . import storage
+        storage.verify_uninstalled()
+        return CheckResult(self.step_id, self.label, CheckStatus.PASSED,
+                           "Data installation disconnected." if not self.purge else "Owned data purged; unrelated files preserved.")
+
+
 STEPS = (
-    Step("data_directory", "Data directory initialized"),
+    DataDirectoryStep("data_directory", "Data directory initialized"),
     Step("background_service", "Background service installed", prerequisites=("data_directory",)),
     Step("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     Step("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
@@ -63,7 +96,7 @@ STEPS = (
 )
 
 UNINSTALL_STEPS = (
-    Step("uninstall_codex", "Codex integration removed"),
+    UninstallStep("uninstall_codex", "Context installation deactivated"),
 )
 
 

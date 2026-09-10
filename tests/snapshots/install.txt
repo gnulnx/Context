@@ -2,26 +2,26 @@
  Base Layer Context
  Persistent context for coding agents
 
- ✗ Data directory initialized
-   Not implemented
+ ✓ Data directory initialized
+   Private directories, schema v1, and active ownership verified.
 
  ✗ Background service installed
-   Prerequisites unavailable
+   Not implemented
 
  ✗ Codex MCP registered
    Prerequisites unavailable
 
  ✗ Codex skills installed
-   Prerequisites unavailable
+   Not implemented
 
  ✗ Codex hooks installed
-   Prerequisites unavailable
+   Not implemented
 
  ✗ Embedding model available
-   Prerequisites unavailable
+   Not implemented
 
  ✗ Existing Codex sessions discovered
-   Prerequisites unavailable
+   Not implemented
 
  ✗ Historical sessions indexed
    Prerequisites unavailable
