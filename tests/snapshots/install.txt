@@ -11,8 +11,8 @@
  ✗ Codex MCP registered
    Prerequisites unavailable
 
- ✗ Codex skills installed
-   Not implemented
+ ✓ Codex skills installed
+   Codex skill base-layer-context v0.1.0 content and ownership verified.
 
  ✗ Codex hooks installed
    Not implemented

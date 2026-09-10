@@ -8,8 +8,10 @@ from bl_context.cli import main
 from bl_context.checks import CheckStatus, Step, run_checks
 
 
-def test_red_snapshot(monkeypatch):
+def test_red_snapshot(monkeypatch, tmp_path):
     monkeypatch.setenv("COLUMNS", "100")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
     result = CliRunner().invoke(main, ["install", "codex", "--no-color"])
     assert result.exit_code == 1
     assert result.output == (Path(__file__).parent / "snapshots/install.txt").read_text()
@@ -31,7 +33,7 @@ def test_json_failures_and_no_changes(args, tmp_path, monkeypatch):
         assert data["ready"] is False
         assert data["exit_code"] == 1
         assert all(c["status"] == "failed" for c in data["checks"])
-        assert all(c["summary"] in ("Not implemented", "Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable")
+        assert all(c["summary"] in ("Not implemented", "Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable", "Codex skill unavailable")
                    for c in data["checks"])
         assert all(c["duration"] >= 0 for c in data["checks"])
     assert list(tmp_path.iterdir()) == [sentinel]
@@ -45,7 +47,7 @@ def test_no_history():
     assert [c["step_id"] for c in checks if c["status"] == "skipped"] == [
         "session_discovery", "history_index", "history_retrieval",
     ]
-    assert sum(c["status"] == "failed" for c in checks) == 7
+    assert sum(c["status"] == "failed" for c in checks) == 6
 
 
 def test_doctor_explains_failure():
