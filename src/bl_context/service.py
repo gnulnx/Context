@@ -7,6 +7,7 @@ import stat
 import subprocess
 
 from . import storage
+from .runtime_version import runtime_fingerprint
 
 
 def manager(*args):
@@ -88,8 +89,10 @@ def verify():
         raise RuntimeError('Expected registered service is not running')
     response = identity(paths)
     pid = int(properties['MainPID'])
-    if response != {'installation_id': manifest['installation_id'], 'pid': pid, 'protocol_version': 1}:
+    if any(response.get(k) != v for k, v in {'installation_id': manifest['installation_id'], 'pid': pid, 'protocol_version': 1}.items()):
         raise RuntimeError('Running daemon identity does not match systemd')
+    if response.get('runtime_fingerprint') != runtime_fingerprint():
+        raise RuntimeError('Daemon code is stale; run blctx install codex --step background_service to restart it')
     if Path(f'/proc/{pid}/exe').resolve() != Path(manifest['interpreter']).resolve():
         raise RuntimeError('Running interpreter does not match installation')
     command = Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
@@ -108,10 +111,20 @@ def install():
         content = unit_text(paths, manifest)
         manager('show-environment')
         storage.safe_path(unit)
+        interpreter_changed = False
         if unit.exists():
             storage.private(unit)
             if unit.read_text() != content:
-                raise RuntimeError('Existing service unit differs; refusing to overwrite it')
+                old_lines = unit.read_text().splitlines()
+                new_lines = content.splitlines()
+                old_exec = [line for line in old_lines if line.startswith('ExecStart=')]
+                suffix = f' -m bl_context.daemon --installation-id {manifest["installation_id"]}'
+                if (len(old_exec) != 1 or not old_exec[0].startswith('ExecStart="')
+                        or not old_exec[0].endswith('"' + suffix)
+                        or [line for line in old_lines if not line.startswith('ExecStart=')] != [line for line in new_lines if not line.startswith('ExecStart=')]):
+                    raise RuntimeError('Existing service unit differs; refusing to overwrite it')
+                unit.write_text(content)
+                interpreter_changed = True
         else:
             with unit.open('x') as stream:
                 os.chmod(unit, 0o600)
@@ -121,6 +134,12 @@ def install():
         manager('enable', str(unit))
         manager('daemon-reload')
         manager('start', unit.name)
+    # Stop/restart outside the manifest lock: a draining worker may need it.
+    response = identity(paths)
+    if response.get('installation_id') != manifest['installation_id']:
+        raise RuntimeError('Unexpected daemon ownership; refusing automatic restart')
+    if interpreter_changed or response.get('runtime_fingerprint') != runtime_fingerprint():
+        manager('restart', unit.name)
     verify()
 
 

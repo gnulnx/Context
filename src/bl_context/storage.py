@@ -239,6 +239,7 @@ def uninstall(purge=False):
         manifest['state'] = 'inactive'
         atomic_manifest(paths, manifest)
         if purge:
+            purge_index_artifacts(paths, manifest)
             db = database_path(paths)
             safe_path(db)
             if db.exists():
@@ -259,3 +260,62 @@ def verify_uninstalled():
     safe_path(path)
     if path.exists() and read_manifest(paths)['state'] != 'inactive':
         raise RuntimeError('Context installation ownership is still active.')
+
+
+def prepare_index_artifacts(paths, kind):
+    """Claim a new dedicated directory, never adopt unrelated existing files."""
+    directory = paths['data'] / 'vectors' if kind == 'vectors' else paths['cache'] / 'embeddings'
+    safe_path(directory)
+    with locked(paths):
+        manifest = read_manifest(paths)
+        trees = manifest.setdefault('index_artifacts', {})
+        if kind not in trees:
+            if directory.exists():
+                raise RuntimeError(f'Refusing unowned index directory: {directory}')
+            trees[kind] = []
+            atomic_manifest(paths, manifest)
+        directory.mkdir(mode=0o700, exist_ok=True)
+        private(directory, directory=True)
+    return directory, {str(p.relative_to(directory)) for p in directory.rglob('*') if not p.is_dir()}
+
+
+def record_index_artifacts(paths, kind, before):
+    directory = paths['data'] / 'vectors' if kind == 'vectors' else paths['cache'] / 'embeddings'
+    after = {str(p.relative_to(directory)) for p in directory.rglob('*') if not p.is_dir()}
+    with locked(paths):
+        manifest = read_manifest(paths)
+        trees = manifest.setdefault('index_artifacts', {})
+        trees[kind] = sorted(set(trees.get(kind, [])) | (after - before))
+        atomic_manifest(paths, manifest)
+
+
+def purge_index_artifacts(paths, manifest):
+    for kind, entries in manifest.get('index_artifacts', {}).items():
+        if kind not in ('vectors', 'embeddings') or not isinstance(entries, list):
+            raise RuntimeError('Invalid index artifact ownership')
+        directory = paths['data'] / 'vectors' if kind == 'vectors' else paths['cache'] / 'embeddings'
+        safe_path(directory)
+        owned_parents = {directory}
+        for entry in entries:
+            relative = Path(entry)
+            if relative.is_absolute() or '..' in relative.parts or not relative.parts:
+                raise RuntimeError('Invalid owned index artifact path')
+            target = directory / relative
+            parent = target.parent
+            while parent != directory:
+                owned_parents.add(parent)
+                parent = parent.parent
+            safe_path(target.parent)
+            if target.is_file() or target.is_symlink():
+                target.unlink()
+        # Empty owned directory structure can be removed; unknown files survive.
+        for target in sorted(owned_parents, key=lambda p: len(p.parts), reverse=True):
+            if target.is_dir() and not target.is_symlink():
+                try:
+                    target.rmdir()
+                except OSError:
+                    pass
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
