@@ -86,8 +86,9 @@ def test_usage_and_output_options(command):
         assert result.exit_code == 2
     result = runner.invoke(main, ['--json', '--no-color'] + command + ['--step', 'data_directory'])
     data = json.loads(result.output)
-    assert result.exit_code == data['exit_code'] == 1
-    assert not data['ready'] and not data['success']
+    assert result.exit_code == data['exit_code'] == (0 if command[0] == 'install' else 1)
+    assert not data['ready']
+    assert data['success'] == (command[0] == 'install')
     assert data['selected_step'] == 'data_directory'
 
 
@@ -153,5 +154,5 @@ def test_real_subprocess_lifecycle(tmp_path):
             invoke([command, '--step', 'fixture'], 1)
             assert not (tmp_path / 'owner').exists()
     for args in [['install', 'codex'], ['status'], ['doctor']]:
-        invoke([*args, '--step', 'data_directory'], 1, fixture=False)
+        invoke([*args, '--step', 'data_directory'], 0, fixture=False)
     invoke(['install', 'codex'], 1, fixture=False)

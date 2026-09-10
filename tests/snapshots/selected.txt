@@ -2,12 +2,12 @@
  Base Layer Context
  Persistent context for coding agents
 
- ✗ Data directory initialized
-   Not implemented
+ ✓ Data directory initialized
+   Private directories, schema v1, and active ownership verified.
 
    Prerequisite for selected step.
 
  ✗ Background service installed
-   Prerequisites unavailable
+   Not implemented
 
  Selected check failed. Not ready.
