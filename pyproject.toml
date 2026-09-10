@@ -8,6 +8,7 @@ version = "0.0.1"
 description = "Persistent context for coding agents"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = ["click>=8.1", "rich>=13"]
 authors = [
     { name = "Base Layer" },
 ]
@@ -27,3 +28,9 @@ Issues = "https://github.com/gnulnx/Context/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+blctx = "bl_context.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "build", "twine"]
