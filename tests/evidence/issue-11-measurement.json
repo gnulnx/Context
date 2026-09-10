@@ -1,0 +1,119 @@
+{
+  "model": {
+    "model": "BAAI/bge-small-en",
+    "repository": "Qdrant/bge-small-en",
+    "revision": "8791246cc2a79c7949a4dc0d4a018cbd7d024879",
+    "dimensions": 384
+  },
+  "download_bytes": 133827551,
+  "load_seconds": 0.36801066203042865,
+  "visible_records": 112,
+  "chunks": 126,
+  "embedding_seconds": 5.83713849587366,
+  "chunks_per_second": 21.585919211797158,
+  "peak_process_rss_mib": 839.1328125,
+  "finite": true,
+  "shape": [
+    126,
+    384
+  ],
+  "real_history_queries": [
+    {
+      "query": "inspect raw sessions before importing",
+      "expected_source_lines": [
+        480,
+        517
+      ],
+      "top_five_source_lines": [
+        482,
+        510,
+        472,
+        472,
+        438
+      ],
+      "hit_at_5": true
+    },
+    {
+      "query": "does qdrant provide a default embedding model",
+      "expected_source_lines": [
+        658,
+        674
+      ],
+      "top_five_source_lines": [
+        660,
+        658,
+        667,
+        745,
+        667
+      ],
+      "hit_at_5": true
+    },
+    {
+      "query": "Unknown request background service index error",
+      "expected_source_lines": [
+        872,
+        932
+      ],
+      "top_five_source_lines": [
+        874,
+        872,
+        917,
+        389,
+        925
+      ],
+      "hit_at_5": true
+    },
+    {
+      "query": "Context UUID separate from Codex session identity",
+      "expected_source_lines": [
+        995,
+        1004
+      ],
+      "top_five_source_lines": [
+        997,
+        1855,
+        438,
+        874,
+        977
+      ],
+      "hit_at_5": true
+    },
+    {
+      "query": "skill installation uninstall merge conflicts",
+      "expected_source_lines": [
+        1236,
+        1409
+      ],
+      "top_five_source_lines": [
+        1261,
+        1238,
+        1236,
+        1402,
+        2013
+      ],
+      "hit_at_5": true
+    },
+    {
+      "query": "approve three Context hooks in Codex",
+      "expected_source_lines": [
+        1603,
+        1992
+      ],
+      "top_five_source_lines": [
+        1603,
+        1575,
+        2005,
+        1995,
+        1449
+      ],
+      "hit_at_5": true
+    }
+  ],
+  "scope": "One local Context development transcript, visible records before line 2023; source text never published. Retrieval sanity check, not a quality benchmark. Peak RSS includes Python, ONNX, tokenizer, transcript parsing and batch-32 embedding.",
+  "machine": {
+    "architecture": "x86_64",
+    "cpu": "AMD Ryzen Threadripper PRO 9965WX 24-Cores",
+    "onnx_threads": 2,
+    "batch_size": 32
+  }
+}

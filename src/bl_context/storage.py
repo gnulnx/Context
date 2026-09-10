@@ -234,6 +234,12 @@ def verify():
 
 
 def uninstall(purge=False):
+    from .embedding import cache_lock
+    with cache_lock(locations()):
+        _uninstall(purge)
+
+
+def _uninstall(purge=False):
     paths = locations()
     for path in paths.values():
         safe_path(path)
@@ -249,6 +255,7 @@ def uninstall(purge=False):
             # A replacement database is not ours merely because its name matches.
             validate_database(paths, manifest['installation_id'])
         manifest['state'] = 'inactive'
+        manifest.pop('embedding_model', None)
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)
