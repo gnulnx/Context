@@ -31,6 +31,7 @@ where = ["src"]
 
 [project.scripts]
 blctx = "bl_context.cli:main"
+blctxd = "bl_context.daemon:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "build", "twine"]

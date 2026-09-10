@@ -8,6 +8,6 @@
    Prerequisite for selected step.
 
  ✗ Background service installed
-   Not implemented
+   Check failed
 
  Selected check failed. Not ready.

@@ -1,0 +1,548 @@
+[
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "failed",
+          "summary": "Background service unavailable",
+          "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1692/test_real_systemd_lifecycle0/.local/share/bl-context'",
+          "remediation": "Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.",
+          "duration": 0.006074674893170595,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.0645808270201087,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967676).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.32951695984229445,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967676).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.013709982857108116,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967676).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.013491624966263771,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.02538761543110013,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967676).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.2773842718452215,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "restart": {
+      "old_pid": 1967676,
+      "new_pid": 1967739
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.4928247230127454,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "failed",
+          "summary": "Background service unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.",
+          "duration": 0.006035367026925087,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "failed",
+          "summary": "Background service unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.",
+          "duration": 0.00621100002899766,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.026378151029348373,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967798).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.3220017431303859,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967798).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.013177404180169106,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967798).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.013654490001499653,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "background_service",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.025513815227895975,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 1967798).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.281121619977057,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "restart": {
+      "old_pid": 1967798,
+      "new_pid": 1967869
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.5025990200228989,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "failed",
+          "summary": "Background service unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.",
+          "duration": 0.005971511360257864,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "background_service",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "background_service",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "failed",
+          "summary": "Background service unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.",
+          "duration": 0.005930569022893906,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  }
+]
