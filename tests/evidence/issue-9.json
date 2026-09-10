@@ -1,0 +1,536 @@
+[
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "failed",
+          "summary": "Codex skill unavailable",
+          "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1732/test_codex_skill_red_green_uni0/.local/share/bl-context'",
+          "remediation": "Run blctx install codex --step codex_skills.",
+          "duration": 0.0024001318961381912,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.0649115638807416,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.026562508661299944,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.013019275851547718,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.018442435190081596,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.00784987909719348,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.008190430235117674,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.03419128665700555,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "failed",
+          "summary": "Codex skill unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_skills.",
+          "duration": 0.002125188708305359,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "failed",
+          "summary": "Codex skill unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_skills.",
+          "duration": 0.002028362825512886,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.021603467874228954,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.02656851802021265,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [
+        "data_directory"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.012965305708348751,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.017864257097244263,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.0077840406447649,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "passed",
+          "summary": "Codex skill base-layer-context v0.1.1 content and ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.008006925228983164,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.03413178725168109,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "failed",
+          "summary": "Codex skill unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_skills.",
+          "duration": 0.002138919662684202,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_skills",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_skills",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_skills",
+          "label": "Codex skills installed",
+          "status": "failed",
+          "summary": "Codex skill unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_skills.",
+          "duration": 0.002199149690568447,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  }
+]

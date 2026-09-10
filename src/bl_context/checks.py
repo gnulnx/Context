@@ -92,6 +92,19 @@ class CodexMcpStep(Step):
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, "Codex MCP unavailable",
                                diagnostic=str(exc), remediation="Run blctx install codex --step codex_mcp.")
 
+class CodexSkillsStep(Step):
+    def install(self):
+        from . import codex_skills
+        codex_skills.install()
+
+    def verify(self):
+        from . import codex_skills
+        try:
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_skills.verify())
+        except Exception as exc:
+            return CheckResult(self.step_id, self.label, CheckStatus.FAILED, "Codex skill unavailable",
+                               diagnostic=str(exc), remediation="Run blctx install codex --step codex_skills.")
+
 
 @dataclass(frozen=True)
 class UninstallStep(Step):
@@ -101,6 +114,8 @@ class UninstallStep(Step):
         from . import storage
         from . import service
         from . import mcp_registration
+        from . import codex_skills
+        codex_skills.uninstall()
         mcp_registration.uninstall()
         service.uninstall()
         storage.uninstall(purge=self.purge)
@@ -116,7 +131,7 @@ STEPS = (
     DataDirectoryStep("data_directory", "Data directory initialized"),
     BackgroundServiceStep("background_service", "Background service installed", prerequisites=("data_directory",)),
     CodexMcpStep("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
-    Step("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
+    CodexSkillsStep("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
     Step("codex_hooks", "Codex hooks installed", prerequisites=("data_directory",)),
     Step("embedding_model", "Embedding model available", prerequisites=("data_directory",)),
     Step("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),

@@ -4,7 +4,7 @@ Persistent context for coding agents.
 
 This repository contains the Python package, onboarding CLI, and the first
 local installation, history retrieval, and Codex MCP integration.
-Automatic lifecycle capture and agent skills are still under development.
+Automatic lifecycle capture and intelligent-update guidance are still under development.
 
 ## Install
 
@@ -25,7 +25,7 @@ and tested on Linux, along with the systemd user service and Codex MCP
 registration; the remaining integration checks report failure.
 Full installation starts the Context user service and registers its MCP server.
 History indexing is explicit; model download occurs on first embedding use.
-Skills and hooks are not installed yet.
+The historical-recall skill is installed; lifecycle hooks remain pending.
 Use the checkout installation below to test this development version.
 
 ```console
@@ -356,3 +356,38 @@ onboarding step remains pending even though protocol integration tests run here.
 # Full real model, daemon, Codex registration and systemd lifecycle acceptance:
 BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
 ```
+
+
+### Codex historical-recall skill
+
+```sh
+blctx install codex --step codex_skills
+blctx status --step codex_skills --json
+blctx doctor --step codex_skills --json
+```
+
+The wheel bundles `src/bl_context/skills/base-layer-context/SKILL.md` as package
+resources. Installation writes one skill to `$CODEX_HOME/skills/base-layer-context`
+(default `~/.codex/skills/base-layer-context`). This path is tested with fresh
+Codex 0.154.0 `skills/list` requests, including a custom root, removal, and reinstall.
+No repository checkout is needed at runtime. Restart an existing Codex client if
+its skill list is stale.
+
+The installer records the version, root, exact file path, and installed SHA-256.
+An unchanged owned file can be upgraded; edited files, unowned directories,
+symlinks, and hardlinks are preserved with an error. A second copy in the standard
+`~/.agents/skills` or `~/.codex/skills` user roots blocks installation rather than
+creating duplicate discovery entries. Arbitrary repository/plugin copies are not
+scanned globally. A disabled `skills.config` entry remains disabled and fails the
+installed check.
+
+`blctx uninstall codex` removes only the hash-matching installed skill, even if
+the package version has since changed. Missing owned files are tolerated;
+additional user files remain. Default uninstall retains Context data, but status
+and doctor still fail after the skill is removed. Uninstall uses the recorded
+root even when the current `CODEX_HOME` differs.
+
+The skill teaches scoped history retrieval, timezone boundaries, source citations,
+coverage limitations, and historical text as evidence. Automatic session binding
+and intelligent tagged updates remain separate work. Canonical-prompt behavioral
+acceptance remains the final onboarding ticket; discovery tests do not claim it.
