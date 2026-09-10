@@ -3,9 +3,23 @@ from collections import Counter
 import json
 import hashlib
 import os
+import re
+
+MAX_RECORD_BYTES = 8 * 1024 * 1024
+SECRET = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,})|(?:api[_-]?key|access[_-]?token|password|client[_-]?secret)\s*[=:]\s*[\"']?[A-Za-z0-9_./+\-=]{12,}", re.I)
 
 
-def classify_transcript(path):
+def corroborate(turn, metadata):
+    by_line = {r['line']: r for r in turn['records']}
+    for record in turn['records']:
+        original = by_line.get(record['duplicate_of_line'])
+        if original and original['decision'] == 'unclassified' and record['phase'] in ('final_answer', 'commentary'):
+            original.update(phase=record['phase'], decision='index', reason='Phase corroborated by duplicate representation')
+            if isinstance(metadata.get('source'), dict) and 'subagent' in metadata['source']:
+                original['decision'] = 'context_only'
+
+
+def classify_transcript(path, on_turn=None, boundary=None):
     turns = []
     current = None
     metadata = {}
@@ -14,21 +28,40 @@ def classify_transcript(path):
     more = False
     next_line = None
 
+    def finish():
+        if current is not None:
+            corroborate(current, metadata)
+            counts.update(r['decision'] for r in current['records'])
+            if on_turn:
+                on_turn(current)
+            else:
+                turns.append(current)
+
     def new_turn(identifier, line, inferred=False):
         nonlocal current, seen
+        finish()
         current = {'turn_id': identifier, 'inferred': inferred, 'start_line': line,
                    'project': metadata.get('cwd'), 'records': []}
-        turns.append(current)
         seen = {}
 
     with path.open('rb') as stream:
-        boundary = os.fstat(stream.fileno()).st_size
+        boundary = os.fstat(stream.fileno()).st_size if boundary is None else boundary
         digest = hashlib.sha256()
         number = 0
         while stream.tell() < boundary:
             offset = stream.tell()
-            raw = stream.readline(boundary - offset)
+            raw = stream.readline(min(boundary - offset, MAX_RECORD_BYTES + 1))
+            if not raw:
+                raise RuntimeError('Source shrank while reading transcript')
             digest.update(raw)
+            oversized = len(raw) > MAX_RECORD_BYTES
+            if oversized:
+                while not raw.endswith(b'\n') and stream.tell() < boundary:
+                    raw = stream.readline(min(boundary-stream.tell(), MAX_RECORD_BYTES))
+                    if not raw:
+                        raise RuntimeError('Source shrank while reading oversized record')
+                    digest.update(raw)
+                raw = b''
             number += 1
             try:
                 r = json.loads(raw)
@@ -41,7 +74,7 @@ def classify_transcript(path):
             kind = r.get('type')
             subtype = p.get('type')
             if kind == 'session_meta':
-                metadata.update({k: p[k] for k in ('id', 'session_id', 'cwd', 'cli_version', 'source') if k in p})
+                metadata.update({k: p[k] for k in ('id', 'session_id', 'cwd', 'cli_version', 'source', 'timestamp', 'forked_from_id', 'parent_session_id') if k in p})
             turn_id = p.get('turn_id') if kind == 'turn_context' or (kind == 'event_msg' and subtype == 'task_started') else None
             if turn_id and (current is None or current['turn_id'] != turn_id):
                 new_turn(turn_id, number)
@@ -70,6 +103,8 @@ def classify_transcript(path):
                     content = item.get('content', [])
                     text = '\n'.join(c['text'] for c in content if isinstance(c, dict) and isinstance(c.get('text'), str)) if isinstance(content, list) else None
 
+            if not isinstance(role, str):
+                role = None
             decision, reason = 'unclassified', 'Unknown record shape; review in raw view'
             duplicate_of = None
             if role:
@@ -77,7 +112,11 @@ def classify_transcript(path):
                     decision, reason = 'excluded', 'System/developer instructions'
                 elif not isinstance(text, str) or not text:
                     reason = 'Message has no recognized text; inspect raw content/attachments'
-                elif role == 'user' and text.lstrip().startswith(('<environment_context', '<codex_internal_context', '# AGENTS.md', '<user_instructions>')):
+                elif SECRET.search(text):
+                    decision, reason = 'excluded', 'Credential-shaped content; excluded conservatively'
+                elif role == 'assistant' and phase in ('analysis', 'reasoning'):
+                    decision, reason = 'excluded', 'Private reasoning phase'
+                elif role == 'user' and text.lstrip().startswith(('<environment_context', '<codex_internal_context', '# AGENTS.md', '<user_instructions>', '<permissions instructions>', '<skills_instructions>')):
                     decision, reason = 'excluded', 'Recognized injected-context prefix; heuristic, reviewable'
                 elif role == 'user':
                     decision, reason = 'index', 'Candidate user input; not yet approved for import'
@@ -124,10 +163,10 @@ def classify_transcript(path):
             record = {'line': number, 'byte_offset': offset, 'timestamp': r.get('timestamp'),
                       'type': kind, 'subtype': subtype, 'role': role, 'phase': phase,
                       'decision': decision, 'reason': reason, 'duplicate_of_line': duplicate_of}
-            if isinstance(text, str):
+            if isinstance(text, str) and (not on_turn or decision in ('index', 'context_only', 'unclassified')):
                 record['text'] = text
             current['records'].append(record)
-            counts[decision] += 1
+    finish()
     return {'path': str(path), 'view': 'preview', 'proposal_only': True,
             'snapshot_bytes': boundary, 'source_digest': digest.hexdigest(), 'metadata': metadata,
             'counts': dict(counts), 'counts_scope': 'displayed source records',

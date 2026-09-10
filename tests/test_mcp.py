@@ -161,6 +161,7 @@ def test_live_session_updates_over_stdio(tmp_path, install_embedding):
                 assert result['results'][0]['source_type'] == 'authored_update'
                 assert result['results'][0]['tags'] == ['materials','rover']
                 assert (await call('get_context',dict(context_id=logged['context_id'])))['results'][0]['text'] == note['text']
+                assert not (await call('get_context',dict(context_id=logged['context_id'],project='/different-project')))['results']
                 assert (await call('recent_context',{}))['results']
                 assert (await call('context_status',{}))['authored_updates_pending'] == 0
     try:

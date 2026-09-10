@@ -1,0 +1,18 @@
+{
+  "scope": "Read-only inventory of the local real Codex corpus; no raw text or project names published",
+  "files": 872,
+  "unique_session_ids": 510,
+  "projects": 29,
+  "bytes": 5179954523,
+  "largest_file_bytes": 218654702,
+  "counts": {
+    "metadata": 264095,
+    "excluded": 518563,
+    "index": 70314,
+    "duplicate": 53887,
+    "unclassified": 17206,
+    "context_only": 2983
+  },
+  "seconds": 21.359803579282016,
+  "peak_rss_mib": 131.765625
+}

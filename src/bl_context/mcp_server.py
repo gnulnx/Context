@@ -36,9 +36,9 @@ def create_server(installation_id):
         return request('search_context', query=query, since=since, until=until, project=project, limit=limit, offset=offset)
 
     @server.tool(annotations=read)
-    def get_context(context_id: str, limit: Limit = 20, offset: Offset = 0, char_offset: Annotated[int, Field(ge=0)] = 0) -> dict[str, Any]:
+    def get_context(context_id: str, limit: Limit = 20, offset: Offset = 0, char_offset: Annotated[int, Field(ge=0)] = 0, since: str | None = None, until: str | None = None, project: str | None = None) -> dict[str, Any]:
         """Expand a result's context_id into messages including commentary. Continue truncated messages using limit=1, message offset, and next_char_offset."""
-        return request('get_context', context_id=context_id, limit=limit, offset=offset, char_offset=char_offset)
+        return request('get_context', context_id=context_id, limit=limit, offset=offset, char_offset=char_offset, since=since, until=until, project=project)
 
     @server.tool(annotations=read)
     def context_status() -> dict[str, Any]:

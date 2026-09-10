@@ -11,11 +11,12 @@ import threading
 import uuid
 
 from . import storage
-from .preview import preview
+from .preview import classify_transcript
 
 from .embedding import MODEL
 COLLECTION = 'context_v1'
 POLICY = 'preview-v2-visible-token384-overlap48'
+SELECTION = 'visible-progress-v2'
 
 
 def utcnow():
@@ -63,6 +64,8 @@ class Index:
                     position INTEGER NOT NULL, timestamp REAL, project TEXT, document TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS context_time ON context_messages(timestamp);
                 CREATE INDEX IF NOT EXISTS context_turn ON context_messages(context_id);
+                CREATE TABLE IF NOT EXISTS embedding_checkpoints (
+                    id TEXT PRIMARY KEY, source TEXT NOT NULL, vector TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS context_chunks (
                     id TEXT PRIMARY KEY, source TEXT NOT NULL, document TEXT NOT NULL, vector TEXT NOT NULL);
             ''')
@@ -96,6 +99,8 @@ class Index:
 
     def submit(self, request):
         operation = request.get('operation')
+        if operation == 'index_inventory':
+            return self.start_inventory(request)
         if operation == 'index':
             sources = request.get('sources')
             if not isinstance(sources, list) or not sources or len(sources) > 10000:
@@ -130,14 +135,19 @@ class Index:
                 source['report'] = json.loads(source['report'])
                 try:
                     current = Path(source['path']).stat()
-                    source['selection_outdated'] = source['report'].get('selection') != 'visible-progress-v1'
+                    source['selection_outdated'] = source['report'].get('selection') != SELECTION
                     source['changed_since_index'] = source['selection_outdated'] or current.st_size != source['bytes'] or current.st_mtime_ns != source['report'].get('source_mtime_ns')
                     source['missing'] = False
                 except OSError:
                     source['missing'] = True
                     source['changed_since_index'] = True
             jobs = [dict(r) for r in db.execute('SELECT id,state,updated,result FROM ingest_jobs ORDER BY created DESC LIMIT 10')]
-            return {'model': MODEL, 'policy': POLICY, 'authored_updates_pending': db.execute("SELECT count(*) FROM authored_updates WHERE state!='indexed'").fetchone()[0], 'scope': 'Explicitly queued files and authored updates; not a claim of all Codex history', 'sources': sources, 'jobs': jobs,
+            manifest = storage.read_manifest(self.paths)
+            history_scope = None
+            if manifest.get('session_discovery'):
+                scope = db.execute('SELECT document FROM discovery_runs WHERE id=?',(manifest['session_discovery']['id'],)).fetchone()
+                history_scope = {'inventory':json.loads(scope[0]) if scope else None, 'import':manifest.get('history_index')}
+            return {'model': MODEL, 'policy': POLICY, 'history_scope':history_scope, 'authored_updates_pending': db.execute("SELECT count(*) FROM authored_updates WHERE state!='indexed'").fetchone()[0], 'scope': 'Explicitly queued files and authored updates; not a claim of all Codex history', 'sources': sources, 'jobs': jobs,
                     'messages': db.execute('SELECT count(*) FROM context_messages').fetchone()[0],
                     'chunks': db.execute('SELECT count(*) FROM context_chunks').fetchone()[0],
                     'oldest_timestamp': db.execute('SELECT min(timestamp) FROM context_messages').fetchone()[0],
@@ -216,51 +226,104 @@ class Index:
         with closing(self.connect()) as db, db:
             db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex if value else '0',))
 
+    def start_inventory(self, request):
+        from .discovery import inventory
+        summary, rows = inventory(self.paths, match_root=False)
+        if request.get('inventory_id') != summary['id']:
+            raise ValueError('Discovery inventory changed; rerun installation')
+        with storage.locked(self.paths):
+            manifest = storage.read_manifest(self.paths)
+            previous = manifest.get('history_index')
+            if previous and previous['inventory_id'] == summary['id']:
+                state = self.status(previous['job_id'])['state']
+                if state in ('queued', 'running', 'complete'):
+                    return {'job_id':previous['job_id'], 'state':state}
+            identifier = str(uuid.uuid4())
+            report = dict(inventory_id=summary['id'], files=[], failed=[], files_completed=0,
+                          files_total=len(rows), stage='Queued history')
+            with closing(self.connect()) as db, db:
+                db.execute('INSERT INTO ingest_jobs VALUES (?,?,?,?,?,?)',
+                           (identifier,'queued',json.dumps([r['path'] for r in rows]),utcnow(),utcnow(),json.dumps(report)))
+            manifest['history_index'] = {'inventory_id':summary['id'], 'job_id':identifier}
+            storage.atomic_manifest(self.paths,manifest)
+        self.executor.submit(self.run_job,identifier)
+        return {'job_id':identifier,'state':'queued'}
+
     def run_job(self, job_id):
         with closing(self.connect()) as db, db:
-            sources = json.loads(db.execute('SELECT sources FROM ingest_jobs WHERE id=?', (job_id,)).fetchone()[0])
+            row = db.execute('SELECT * FROM ingest_jobs WHERE id=?', (job_id,)).fetchone()
+            sources = json.loads(row['sources'])
+            inventory_id = json.loads(row['result']).get('inventory_id')
             db.execute("UPDATE ingest_jobs SET state='running',updated=? WHERE id=?", (utcnow(), job_id))
-        report = {'files': [], 'failed': []}
+        snapshots = {}
+        if inventory_id:
+            with closing(self.connect()) as db:
+                snapshots = {r['path']:json.loads(r['document']) for r in db.execute(
+                    'SELECT path,document FROM discovery_sources WHERE inventory_id=?',(inventory_id,))}
+        report = dict(inventory_id=inventory_id, files=[], failed=[], files_total=len(sources), files_completed=0)
+        def progress(stage, completed=0, total=0):
+            report.update(stage=stage,chunks_completed=completed,chunks_total=total)
+            with closing(self.connect()) as db, db:
+                db.execute('UPDATE ingest_jobs SET result=?,updated=? WHERE id=?', (json.dumps(report),utcnow(),job_id))
         for source in sources:
             if self.stopping.is_set():
-                return  # Persist running state; startup replays the idempotent job.
+                return
+            report['current_source'] = source
+            progress('Reading session')
             try:
-                report['files'].append(self.index_file(Path(source)))
+                snapshot = snapshots.get(source)
+                if inventory_id and (not snapshot or not snapshot['compatible']):
+                    raise RuntimeError('Unsupported discovery source; inspect session inventory')
+                result = self.index_file(Path(source), progress=progress, inventory_id=inventory_id,
+                    boundary=snapshot['snapshot_bytes'] if snapshot else None,
+                    expected_digest=snapshot['digest'] if snapshot else None)
+                report['files'].append(result)
+            except InterruptedError:
+                return  # Running job + batch checkpoints survive daemon shutdown.
             except Exception as exc:
                 report['failed'].append({'path': source, 'error': str(exc)})
-            with closing(self.connect()) as db, db:
-                db.execute('UPDATE ingest_jobs SET result=?,updated=? WHERE id=?', (json.dumps(report), utcnow(), job_id))
+            report['files_completed'] += 1
+            progress('Indexing history')
         partial = report['failed'] or any(r.get('unclassified', 0) for r in report['files'])
+        report.update(stage='Import partial' if partial else 'Import complete', current_source=None)
         with closing(self.connect()) as db, db:
             db.execute('UPDATE ingest_jobs SET state=?,result=?,updated=? WHERE id=?',
                        ('partial' if partial else 'complete', json.dumps(report), utcnow(), job_id))
 
-    def index_file(self, path, context_session_id=None, capture_generation=None):
+    def index_file(self, path, context_session_id=None, capture_generation=None, *, boundary=None, expected_digest=None, progress=None, inventory_id=None):
         from qdrant_client import models
         storage.safe_path(path)
-        data = preview(path, 1, 2**63, details=True)
-        size = data['snapshot_bytes']
-        # Hash exactly the parsed snapshot. If it changed in place, retry later.
+        from .discovery import prefix_hash
+        progress = progress or (lambda *args: None)
+        def fence():
+            if self.stopping.is_set():
+                raise InterruptedError('Indexer stopping')
+            manifest = storage.read_manifest(self.paths)
+            if manifest['state'] != 'active':
+                raise RuntimeError('Index installation is inactive')
+            if inventory_id and manifest.get('session_discovery', {}).get('id') != inventory_id:
+                raise RuntimeError('Import scope disconnected or replaced')
+        fence()
         before = path.stat()
-        digest = hashlib.sha256()
-        with path.open('rb') as stream:
-            remaining = size
-            while remaining:
-                block = stream.read(min(remaining, 1024 * 1024))
-                if not block:
-                    raise RuntimeError('Source shrank during import; retry')
-                digest.update(block)
-                remaining -= len(block)
-        fingerprint = digest.hexdigest()
-        after = path.stat()
-        if before.st_ino != after.st_ino or after.st_size < size or fingerprint != data['source_digest']:
-            raise RuntimeError('Source changed during import; retry')
+        size = before.st_size if boundary is None else boundary
+        fingerprint = prefix_hash(path, size)
+        if expected_digest is not None and fingerprint != expected_digest:
+            raise RuntimeError('Source no longer matches discovered snapshot; rediscover it')
         with closing(self.connect()) as db:
             previous = db.execute('SELECT * FROM indexed_sources WHERE path=?', (str(path),)).fetchone()
         if previous and context_session_id is None:
             context_session_id = json.loads(previous['report']).get('context_session_id')
-        if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == 'visible-progress-v1':
+        if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == SELECTION:
             return {**json.loads(previous['report']), 'unchanged': True}
+        selected_turns = []
+        def collect(turn):
+            turn['records'] = [r for r in turn['records'] if r['decision'] in ('index', 'context_only')]
+            if turn['records']:
+                selected_turns.append(turn)
+        data = classify_transcript(path, on_turn=collect, boundary=size)
+        data['turns'] = selected_turns
+        if data['source_digest'] != fingerprint:
+            raise RuntimeError('Source changed during import; retry')
         session_id = data['metadata'].get('session_id') or data['metadata'].get('id') or str(path)
         replaced_sources = [str(path)]
         with closing(self.connect()) as db:
@@ -271,7 +334,7 @@ class Index:
             if not Path(other['path']).exists():
                 replaced_sources.append(other['path'])
             elif other['digest'] == fingerprint:
-                return {**json.loads(other['report']), 'path': str(path), 'unchanged': True, 'duplicate_source_of': other['path']}
+                return {**json.loads(other['report']), 'path': str(path), 'unchanged': True, 'duplicate_source_of': other['path'], 'source_digest':fingerprint}
             else:
                 raise RuntimeError('Conflicting existing transcripts share a session ID; resolve before importing')
         messages, chunks = [], []
@@ -288,6 +351,7 @@ class Index:
                 doc = {'id': identifier, 'context_id': context_id, 'session_id': session_id,
                        'source_type': 'codex_transcript', 'source_session_id': session_id,
                        'context_session_id': context_session_id,
+                       'parent_source_session_id': data['metadata'].get('forked_from_id') or data['metadata'].get('parent_session_id'),
                        'turn_id': turn['turn_id'], 'project': turn['project'],
                        'timestamp': record['timestamp'], 'timestamp_epoch': timestamp,
                        'role': record['role'], 'phase': record['phase'], 'text': record['text'],
@@ -309,25 +373,35 @@ class Index:
             vector_revision = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()[0]
         rows = []
         for start in range(0, len(chunks), 32):
+            fence()
+            progress('Embedding current session', start, len(chunks))
             batch = chunks[start:start+32]
             placeholders = ','.join('?' for _ in batch)
             with closing(self.connect()) as db:
                 cached = {r['id']:json.loads(r['vector']) for r in db.execute(
-                    f'SELECT id,vector FROM context_chunks WHERE id IN ({placeholders})', [c['id'] for c in batch])}
+                    f'SELECT id,vector FROM embedding_checkpoints WHERE id IN ({placeholders}) UNION SELECT id,vector FROM context_chunks WHERE id IN ({placeholders})', [c['id'] for c in batch]*2)}
             missing = [c for c in batch if c['id'] not in cached]
             if missing:
                 embeddings = self.load_model().passage_embed([c['document']['text'] for c in missing], batch_size=32)
                 cached.update({chunk['id']:vector.tolist() for chunk,vector in zip(missing,embeddings,strict=True)})
+            with closing(self.connect()) as db, db:
+                db.executemany('INSERT OR REPLACE INTO embedding_checkpoints VALUES (?,?,?)',
+                    [(chunk['id'],str(path),json.dumps(cached[chunk['id']])) for chunk in missing])
             points = []
             for chunk in batch:
                 values = cached[chunk['id']]
                 rows.append((chunk['id'], str(path), json.dumps(chunk['document']), json.dumps(values)))
                 points.append(models.PointStruct(id=chunk['id'], vector=values, payload=chunk['document']))
             vectors.upsert(COLLECTION, points)
+            progress('Embedding current session', min(start+32,len(chunks)), len(chunks))
+        fence()
+        if prefix_hash(path,size) != fingerprint:
+            raise RuntimeError('Source changed before import commit; retry')
         report = {'path': str(path), 'session_id': session_id, 'messages': len(messages), 'chunks': len(chunks),
-                  'snapshot_bytes': size, 'source_mtime_ns': before.st_mtime_ns, 'unclassified': data['counts'].get('unclassified', 0),
-                  'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': 'visible-progress-v1'}
-        with (storage.locked(self.paths) if capture_generation else nullcontext()):
+                  'snapshot_bytes': size, 'source_digest': fingerprint, 'source_mtime_ns': before.st_mtime_ns, 'unclassified': data['counts'].get('unclassified', 0),
+                  'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': SELECTION}
+        with storage.locked(self.paths):
+            fence()
             if capture_generation:
                 current = storage.read_manifest(self.paths)
                 if current['state'] != 'active' or current.get('codex_hooks', {}).get('generation') != capture_generation:
@@ -349,6 +423,7 @@ class Index:
                         db.execute('UPDATE context_messages SET document=? WHERE id=?',(json.dumps(document),alias['id']))
                         db.execute("DELETE FROM context_chunks WHERE json_extract(document,'$.id')=?", (alias['id'],))
 
+                db.execute('DELETE FROM embedding_checkpoints WHERE source=?', (str(path),))
                 db.execute('INSERT OR REPLACE INTO indexed_sources VALUES (?,?,?,?,?)', (str(path), fingerprint, size, utcnow(), json.dumps(report)))
         with closing(self.connect()) as db:
             actual = {r[0] for r in db.execute('SELECT id FROM context_chunks WHERE source=?',(str(path),))}
@@ -359,6 +434,64 @@ class Index:
             db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (vector_revision,))
         storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
         return report
+
+    def verify_history(self, request):
+        from .discovery import inventory
+        summary, sources = inventory(self.paths, match_root=False)
+        registration = storage.read_manifest(self.paths).get('history_index')
+        if (request.get('inventory_id') != summary['id'] or not registration
+                or registration['inventory_id'] != summary['id']):
+            raise RuntimeError('Import scope is not active')
+        job = self.status(registration['job_id'])
+        if job['state'] != 'complete' or summary['unsupported']:
+            raise RuntimeError('Declared import is partial or incomplete')
+        reports = {r['path']:r for r in job['result']['files']}
+        if set(reports) != {r['path'] for r in sources}:
+            raise RuntimeError('Import does not cover every declared file')
+        totals = dict(files=len(sources), messages=0, chunks=0)
+        samples, seen = [], set()
+        with closing(self.connect()) as db:
+            dirty = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()
+            if dirty and dirty[0] != '0':
+                raise RuntimeError('Vector publication incomplete; retry import before verification')
+            for source in sources:
+                report = reports[source['path']]
+                canonical = report.get('duplicate_source_of',source['path'])
+                stored = db.execute('SELECT * FROM indexed_sources WHERE path=?',(canonical,)).fetchone()
+                if (not stored or stored['digest'] != source['digest'] or stored['bytes'] != source['snapshot_bytes']
+                        or report.get('selection') != SELECTION or report.get('unclassified')):
+                    raise RuntimeError('Source checkpoint missing, partial or stale; rerun import')
+                if canonical in seen:
+                    continue
+                seen.add(canonical)
+                messages = db.execute('SELECT count(*) FROM context_messages WHERE source=?',(canonical,)).fetchone()[0]
+                chunks = db.execute('SELECT count(*) FROM context_chunks WHERE source=?',(canonical,)).fetchone()[0]
+                if messages != report['messages'] or chunks != report['chunks']:
+                    raise RuntimeError('Persisted import counts disagree with source checkpoint')
+                totals['messages'] += messages
+                totals['chunks'] += chunks
+                sample = db.execute('SELECT id,document FROM context_chunks WHERE source=? LIMIT 1',(canonical,)).fetchone()
+                if sample:
+                    samples.append(dict(sample))
+        if not samples:
+            raise RuntimeError('No searchable historical records; historical retrieval cannot be claimed')
+        vectors = self.open_vectors()
+        for offset in range(0,len(samples),64):
+            batch = samples[offset:offset+64]
+            found = vectors.retrieve(COLLECTION,ids=[r['id'] for r in batch],with_payload=True)
+            if {p.id for p in found} != {r['id'] for r in batch}:
+                raise RuntimeError('Source-linked vectors are missing')
+            expected = {r['id']:json.loads(r['document']) for r in batch}
+            if any(p.payload != expected[p.id] for p in found):
+                raise RuntimeError('Vector provenance differs from stored records')
+        sample = json.loads(samples[0]['document'])
+        context = self.query({'operation':'get_context','context_id':sample['context_id'],'limit':50})
+        if not any(r.get('source',{}).get('path') == sample['source']['path'] for r in context['results']):
+            raise RuntimeError('Context expansion has no matching source reference')
+        result = self.query({'operation':'search_context','query':sample['text'][:2000],'limit':5,'project':sample['project']})
+        if not result['results'] or not all(r.get('source',{}).get('path') for r in result['results']):
+            raise RuntimeError('Semantic retrieval did not return source-linked records')
+        return totals
 
     @staticmethod
     def identifier(value):
@@ -479,6 +612,8 @@ class Index:
 
     def query(self, request):
         operation = request.get('operation')
+        if operation == 'verify_history':
+            return self.verify_history(request)
         if operation == 'open_session':
             return self.open_session(request)
         if operation == 'log_update':
@@ -505,7 +640,7 @@ class Index:
         where = ' AND '.join(clauses) or '1'
         with closing(self.connect()) as db:
             if operation == 'get_context':
-                rows = db.execute('SELECT document FROM context_messages WHERE context_id=? ORDER BY position LIMIT ? OFFSET ?', (request.get('context_id'), limit+1, offset)).fetchall()
+                rows = db.execute(f'SELECT document FROM context_messages WHERE context_id=? AND {where} ORDER BY position LIMIT ? OFFSET ?', (request.get('context_id'), *params, limit+1, offset)).fetchall()
                 documents = [json.loads(r[0]) for r in rows]
             elif operation == 'recent_context':
                 # Only searchable messages earn a turn a place in recent results.

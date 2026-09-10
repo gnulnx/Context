@@ -1,0 +1,18 @@
+{
+  "scope": "End-to-end CPU+SQLite+Qdrant benchmark on isolated copies of four real compatible histories from distinct projects; selection limited to 8-40 visible records and <512KB each. No raw content published; excludes unsupported histories, not a full-corpus import.",
+  "files": 4,
+  "source_bytes": 1902693,
+  "messages": 97,
+  "chunks": 106,
+  "seconds": 7.834299650974572,
+  "repeat_seconds": 0.002379401121288538,
+  "peak_rss_mib": 925.5625,
+  "source_linked_retrieval_probes": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "embedding_batch": 32,
+  "onnx_threads": 2
+}

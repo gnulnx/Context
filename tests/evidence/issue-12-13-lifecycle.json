@@ -1,0 +1,813 @@
+{
+  "scope": "Isolated HOME/XDG/CODEX_HOME, real systemd daemon, pinned CPU model and Qdrant, two synthetic projects/days",
+  "records": [
+    {
+      "command": "blctx status --step session_discovery --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Session inventory unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Run blctx install codex --step session_discovery.",
+            "duration": 0.010571253951638937,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step session_discovery --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Session inventory unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Run blctx install codex --step session_discovery.",
+            "duration": 0.004101756028831005,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step history_index --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Historical import incomplete",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Inspect blctx index-status; rerun blctx install codex --step history_index.",
+            "duration": 0.004041614942252636,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step history_index --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Historical import incomplete",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Inspect blctx index-status; rerun blctx install codex --step history_index.",
+            "duration": 0.0042419759556651115,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx install codex --step data_directory --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "data_directory",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.06515290308743715,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx install codex --step session_discovery --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "session_discovery",
+        "dependencies": [
+          "data_directory"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.013743345160037279,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.06783201266080141,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx install codex --step history_index",
+      "exit_code": 0,
+      "terminal_progress": true
+    },
+    {
+      "command": "blctx status --step session_discovery --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.006697020027786493,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step session_discovery --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.006406774744391441,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.04730583122000098,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.03919827286154032,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx install codex --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [
+          "data_directory",
+          "session_discovery",
+          "embedding_model",
+          "background_service"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.014006339013576508,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.02135816216468811,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.5867376187816262,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2201933).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.2901820279657841,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.04806992691010237,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx search rover-battery-power with project/day filters",
+      "exit_code": 0,
+      "results": [
+        {
+          "id": "23fa163e-f0b2-5a8b-80ae-0023f64e50d3",
+          "context_id": "4fdc169e-d168-5324-a38d-1d1364906edd",
+          "session_id": "a",
+          "source_type": "codex_transcript",
+          "source_session_id": "a",
+          "context_session_id": null,
+          "parent_source_session_id": null,
+          "turn_id": "t",
+          "project": "/project/rover",
+          "timestamp": "2026-09-08T12:00:00Z",
+          "timestamp_epoch": 1788868800.0,
+          "role": "user",
+          "phase": null,
+          "text": "Lithium batteries power the rover.",
+          "decision": "index",
+          "source": {
+            "path": "/tmp/blctx-history-lifecycle-h95dq02_/codex/sessions/a.jsonl",
+            "line": 3,
+            "byte_offset": 149
+          },
+          "char_start": 0,
+          "char_end": 34,
+          "chunk_id": "b033a85f-717c-5dad-8312-21d7fbc3e740",
+          "score": 0.9545160780071088,
+          "text_truncated": false,
+          "text_char_start": 0,
+          "text_char_end": 34,
+          "next_char_offset": null
+        },
+        {
+          "id": "08dd083f-e7de-53da-9bcc-245fbd976b81",
+          "context_id": "4fdc169e-d168-5324-a38d-1d1364906edd",
+          "session_id": "a",
+          "source_type": "codex_transcript",
+          "source_session_id": "a",
+          "context_session_id": null,
+          "parent_source_session_id": null,
+          "turn_id": "t",
+          "project": "/project/rover",
+          "timestamp": "2026-09-08T12:01:00Z",
+          "timestamp_epoch": 1788868860.0,
+          "role": "assistant",
+          "phase": "final_answer",
+          "text": "Recorded the engineering decision.",
+          "decision": "index",
+          "source": {
+            "path": "/tmp/blctx-history-lifecycle-h95dq02_/codex/sessions/a.jsonl",
+            "line": 4,
+            "byte_offset": 343
+          },
+          "char_start": 0,
+          "char_end": 34,
+          "chunk_id": "1ee15841-288d-5a92-96f9-f9be3aab0797",
+          "score": 0.7933401969669374,
+          "text_truncated": false,
+          "text_char_start": 0,
+          "text_char_end": 34,
+          "next_char_offset": null
+        }
+      ]
+    },
+    {
+      "command": "blctx uninstall codex --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Data installation disconnected.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.6569765950553119,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step session_discovery --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Session inventory unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step session_discovery.",
+            "duration": 0.004543689079582691,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step session_discovery --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Session inventory unavailable",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Run blctx install codex --step session_discovery.",
+            "duration": 0.004996026866137981,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step history_index --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Historical import incomplete",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Inspect blctx index-status; rerun blctx install codex --step history_index.",
+            "duration": 0.004279332235455513,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step history_index --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": false,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Historical import incomplete",
+            "diagnostic": "Context installation ownership is inactive.",
+            "remediation": "Inspect blctx index-status; rerun blctx install codex --step history_index.",
+            "duration": 0.004243738949298859,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx install codex --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "install",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [
+          "data_directory",
+          "session_discovery",
+          "embedding_model",
+          "background_service"
+        ],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "data_directory",
+            "label": "Data directory initialized",
+            "status": "passed",
+            "summary": "Private directories, schema v1, and active ownership verified.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.014199458993971348,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.031169916037470102,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "embedding_model",
+            "label": "Embedding model available",
+            "status": "passed",
+            "summary": "BAAI/bge-small-en: pinned revision 8791246cc2a7, CPU, 384 dimensions; finite embeddings and retrieval verified offline.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.6213436317630112,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "background_service",
+            "label": "Background service installed",
+            "status": "passed",
+            "summary": "Enabled user service and daemon identity verified (PID 2202380).",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.34248639922589064,
+            "skip_reason": null,
+            "dependency": true
+          },
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 1.0140449469909072,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step session_discovery --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.0065671950578689575,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step session_discovery --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "passed",
+            "summary": "Readable snapshot: 2 sessions in 2 files (1 active, 1 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. ",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.006351080723106861,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.04635744681581855,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx doctor --step history_index --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "doctor",
+        "ready": false,
+        "success": true,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "passed",
+            "summary": "Declared snapshot indexed: 2 files, 4 messages, 4 chunks; source-linked retrieval verified. Outside snapshot: 0 new files, 0 appended files.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.03790582390502095,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx uninstall codex --purge --json",
+      "exit_code": 0,
+      "output": {
+        "schema_version": 1,
+        "command": "uninstall",
+        "ready": false,
+        "success": true,
+        "selected_step": null,
+        "dependencies": [],
+        "exit_code": 0,
+        "checks": [
+          {
+            "step_id": "uninstall_codex",
+            "label": "Context installation deactivated",
+            "status": "passed",
+            "summary": "Owned data purged; unrelated files preserved.",
+            "diagnostic": "",
+            "remediation": "",
+            "duration": 0.6249892530031502,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step session_discovery --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "session_discovery",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "session_discovery",
+            "label": "Existing Codex sessions discovered",
+            "status": "failed",
+            "summary": "Session inventory unavailable",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Run blctx install codex --step session_discovery.",
+            "duration": 0.004919101949781179,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    },
+    {
+      "command": "blctx status --step history_index --json",
+      "exit_code": 1,
+      "output": {
+        "schema_version": 1,
+        "command": "status",
+        "ready": false,
+        "success": false,
+        "selected_step": "history_index",
+        "dependencies": [],
+        "exit_code": 1,
+        "checks": [
+          {
+            "step_id": "history_index",
+            "label": "Historical sessions indexed",
+            "status": "failed",
+            "summary": "Historical import incomplete",
+            "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-history-lifecycle-h95dq02_/data/bl-context'",
+            "remediation": "Inspect blctx index-status; rerun blctx install codex --step history_index.",
+            "duration": 0.004431089852005243,
+            "skip_reason": null,
+            "dependency": false
+          }
+        ]
+      }
+    }
+  ],
+  "original_transcripts_byte_identical": true,
+  "unrelated_codex_config_preserved": true
+}

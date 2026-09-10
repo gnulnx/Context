@@ -1,0 +1,141 @@
+{
+  "codex_version": "0.154.0",
+  "scope": "Isolated copies of three real transcripts; no thread start/resume/fork methods called",
+  "records": [
+    {
+      "method": "thread/list",
+      "params": {
+        "limit": 1,
+        "modelProviders": [],
+        "sourceKinds": [
+          "cli",
+          "exec",
+          "appServer",
+          "vscode",
+          "subAgent",
+          "subAgentReview",
+          "subAgentCompact",
+          "subAgentThreadSpawn",
+          "subAgentOther",
+          "unknown"
+        ]
+      },
+      "error": null,
+      "result_keys": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ],
+      "thread_turn_count": 0,
+      "count": 1,
+      "has_next_cursor": false
+    },
+    {
+      "method": "thread/list",
+      "params": {
+        "limit": 1,
+        "archived": true,
+        "modelProviders": [],
+        "sourceKinds": [
+          "cli",
+          "exec",
+          "appServer",
+          "vscode",
+          "subAgent",
+          "subAgentReview",
+          "subAgentCompact",
+          "subAgentThreadSpawn",
+          "subAgentOther",
+          "unknown"
+        ]
+      },
+      "error": null,
+      "result_keys": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ],
+      "thread_turn_count": 0,
+      "count": 1,
+      "has_next_cursor": false
+    },
+    {
+      "method": "thread/read",
+      "params": {
+        "includeTurns": false
+      },
+      "error": null,
+      "result_keys": [
+        "thread"
+      ],
+      "thread_turn_count": 0,
+      "count": 0,
+      "has_next_cursor": false
+    },
+    {
+      "method": "thread/read",
+      "params": {
+        "includeTurns": true
+      },
+      "error": null,
+      "result_keys": [
+        "thread"
+      ],
+      "thread_turn_count": 0,
+      "count": 0,
+      "has_next_cursor": false
+    },
+    {
+      "method": "thread/turns/list",
+      "params": {
+        "limit": 1,
+        "itemsView": "full"
+      },
+      "error": null,
+      "result_keys": [
+        "data",
+        "nextCursor",
+        "backwardsCursor"
+      ],
+      "thread_turn_count": 0,
+      "count": 0,
+      "has_next_cursor": false
+    },
+    {
+      "method": "thread/loaded/list",
+      "params": {},
+      "error": null,
+      "result_keys": [
+        "data",
+        "nextCursor"
+      ],
+      "thread_turn_count": 0,
+      "count": 0,
+      "has_next_cursor": false
+    }
+  ],
+  "source_bytes_unchanged": true,
+  "codex_auxiliary_files_created": [
+    "thread_history_1.sqlite-wal",
+    "goals_1.sqlite-shm",
+    "queue_1.sqlite-wal",
+    "thread_history_1.sqlite-shm",
+    "state_5.sqlite-shm",
+    "installation_id",
+    "state_5.sqlite-wal",
+    "memories_1.sqlite-wal",
+    "logs_2.sqlite-shm",
+    "memories_1.sqlite-shm",
+    "goals_1.sqlite",
+    "thread_history_1.sqlite",
+    "queue_1.sqlite-shm",
+    "state_5.sqlite",
+    "memories_1.sqlite",
+    "goals_1.sqlite-wal",
+    "queue_1.sqlite",
+    "skills",
+    "logs_2.sqlite",
+    "logs_2.sqlite-wal",
+    ".tmp"
+  ]
+}

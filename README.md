@@ -22,9 +22,11 @@ print(bl_context.__version__)
 
 The onboarding CLI uses Click and Rich. The data directory step is implemented
 and tested on Linux, along with the systemd user service and Codex MCP
-registration; the remaining integration checks report failure.
+registration, embedding setup, history discovery and historical import. The final
+service/MCP/history readiness checks remain separate tickets.
 Full installation starts the Context user service and registers its MCP server.
-History indexing is explicit; the embedding_model installer step downloads and verifies the local model before use.
+Full installation discovers and imports local active/archived history unless
+`--no-history` is given. The embedding_model step verifies the local model before import.
 The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
 Use the checkout installation below to test this development version.
 
@@ -555,3 +557,113 @@ indexing, daemon and offline lifecycle tests. It reuses the pinned revision unde
 or downloads into each isolated test installation. Ordinary tests stay offline
 and exercise real local HTTP interruption/range/error behavior. Hooks are last in
 the installer checklist; their guided optional approval screen is a follow-up.
+
+### Discover and import existing history (tickets #12 and #13)
+
+```sh
+# Use the same environment as your installed blctx command.
+blctx install codex --step session_discovery
+blctx sessions --limit 20
+
+# Resolves discovery, embedding and background-service prerequisites, then imports.
+blctx install codex --step history_index
+blctx status --step history_index --json
+blctx doctor --step history_index
+
+blctx recent --days 7
+blctx search 'why did we choose that implementation?' --project /absolute/project
+blctx context CONTEXT_ID --project /absolute/project --since 2026-09-08 --until 2026-09-10
+```
+
+Discovery respects `$CODEX_HOME` (default `~/.codex`) and walks `sessions` and
+`archived_sessions`. It never starts or resumes a Codex session. The private
+Context SQLite inventory records source paths/IDs, session and parent IDs when
+present, snapshot size and SHA256, timestamps, cwd/projects, Codex version,
+classification counts, unsupported sources and missing history directories.
+`blctx sessions` pages this inventory with `--limit` and `--offset`; it does not
+import or reveal message text. Symlinks are rejected rather than silently crossing
+into another directory. Missing roots fail; existing roots with no history have
+an honestly empty inventory. Empty history cannot pass historical retrieval.
+
+We evaluated the installed Codex 0.154.0 App Server's `thread/list`, `thread/read`
+and `thread/turns/list`, including archived/source filters and pagination params,
+on isolated real transcript copies. Those copies did not yield complete API
+coverage or hydrated turns, and server startup created Codex auxiliary databases.
+This is evidence about that isolated-copy scenario, not a claim that all existing
+App Server databases behave identically. The
+[official App Server documentation](https://developers.openai.com/codex/app-server/)
+and installed schemas describe paginated reads, but direct JSONL adaptation gives
+us exact line/byte provenance and works without Codex state hydration. See
+`tests/evidence/issue-12-app-server.json`; no start/resume/fork calls were made.
+
+The history step declares an immutable inventory snapshot, queues a durable job
+on the existing daemon, and displays actual **files processed / files declared**
+plus **chunks completed / chunks in the current file** and an ETA in a terminal.
+Piped output reports stages and file counts; `--json` stays machine-readable.
+Unsupported, malformed, oversized or unclassified records make the import
+**partial**, not green. An empty or entirely excluded scope cannot claim retrieval.
+The scope and job registration are also exposed through MCP `context_status`.
+
+Green requires the declared files to have matching persisted source checkpoints,
+counts and source-linked vectors, context expansion and semantic retrieval. Status
+and doctor verify the declared snapshot, not an assertion that all current or
+future history was imported. They report new files and appended files outside
+that snapshot. If its existing bytes changed or a source disappeared, verification
+fails. Rerun `blctx install codex --step history_index` to discover and import a new
+snapshot. A byte-identical duplicate file shares the canonical session's records;
+conflicting files claiming one session ID are reported as failures. Forks with
+distinct source session IDs remain separate and preserve supplied parent metadata.
+
+Normalization shares the `explore --view preview` policy: user requests, visible
+assistant progress and final answers; no reasoning, injected setup instructions,
+duplicate event copies or bulk tool traffic. Recognizable credential-shaped
+messages (private keys, common token formats, long secret assignments) are excluded
+conservatively. This heuristic is not a universal secret detector; preview remains
+available for inspecting the selection. Unrecognized formats are counted instead
+of guessed. Records above 8 MiB are skipped as unclassified with streaming reads.
+
+Storage remains **SQLite authority + local Qdrant**, with the pinned BGE-small CPU
+model for both documents and queries. Input is scanned a turn at a time, discarding
+excluded message text; selected messages/chunks for one file are retained during
+normalization. Embeddings are produced in batches of 32 and committed to durable
+SQLite batch checkpoints. Restart reuses completed batches, while source publication
+is atomic. An interrupted publication leaves vector recovery marked incomplete,
+not falsely ready. Large individual visible conversations can still raise RAM use.
+Temporal bounds are inclusive `since`, exclusive `until`; dates without offsets
+are UTC. Recent, search and context expansion accept exact project/time filters.
+Existing pagination and 24,000-character response text limits remain in force.
+
+Ctrl-C stops the installer's wait, not the durable daemon job; the error gives its
+job ID. `blctx index-status JOB_ID` inspects it. Rerunning installation reuses an
+unchanged inventory and running/completed job; changed inventories create a new
+scope. Restarted daemons resume queued/running work and reuse saved embeddings.
+Normal uninstall stops ingestion and removes discovery/import registrations while
+retaining Context data. Reinstalling only the data directory does not earn a green
+history check. Explicit reinstall reactivates verified data; `--purge` removes the
+owned database/checkpoints and index. Original transcripts and unrelated Codex
+configuration are preserved. `--no-history` skips discovery, import and historical
+retrieval explicitly.
+
+Measured on the development machine: discovery scanned **872 real files / 5.18 GB**
+in about **21.4 s**, peaking at **132 MiB** process RSS. A separate end-to-end import
+of four compatible real histories from distinct projects (1.90 MB, 97 messages,
+106 chunks) took **7.83 s**, peaked at **926 MiB**, and passed all four source-linked
+retrieval probes. A repeat took about **0.0024 s** using unchanged checkpoints.
+These measurements support retaining the existing two ONNX threads and batch-32
+configuration; they are not a full-corpus import or a universal performance claim.
+Unknown/conflicting histories were not included in the small import benchmark.
+See `tests/evidence/issue-12-corpus.json` and `tests/evidence/issue-13-benchmark.json`.
+
+For an isolated end-to-end uninstall/reinstall test, use a temporary `CODEX_HOME`
+with copies of a few transcripts and separate absolute `XDG_DATA_HOME`,
+`XDG_CONFIG_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME` paths. Retain your real
+`XDG_RUNTIME_DIR` and session bus for the systemd user manager. Run the commands
+above, uninstall, verify both steps fail, reinstall `history_index`, verify both
+pass, and finally uninstall with `--purge`. Each installation has its own service
+identity. The committed `tests/evidence/issue-12-13-lifecycle.json` records that
+sequence with command results and preservation checks.
+
+```sh
+# Full CPU model, daemon, MCP and isolated systemd acceptance:
+BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
+```

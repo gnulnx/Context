@@ -109,7 +109,14 @@ class CodexSkillsStep(Step):
 class EmbeddingModelStep(Step):
     def install(self):
         from . import embedding
-        embedding.install()
+        # A repeated history install must not revoke a model used by an active job.
+        try:
+            embedding.verify()
+        except Exception:
+            embedding.install()
+        else:
+            size = sum(size for size, _ in embedding.FILES.values())
+            embedding.emit('Reusing verified embedding model', size, size)
 
     def verify(self):
         from . import embedding
@@ -118,6 +125,34 @@ class EmbeddingModelStep(Step):
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Embedding model unavailable',
                                diagnostic=str(exc), remediation='Run blctx install codex --step embedding_model; completed downloads are reused.')
+
+
+class SessionDiscoveryStep(Step):
+    def install(self):
+        from . import discovery
+        discovery.install()
+
+    def verify(self):
+        from . import discovery
+        try:
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, discovery.verify())
+        except Exception as exc:
+            return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Session inventory unavailable',
+                               diagnostic=str(exc), remediation='Run blctx install codex --step session_discovery.')
+
+
+class HistoryIndexStep(Step):
+    def install(self):
+        from . import history
+        history.install()
+
+    def verify(self):
+        from . import history
+        try:
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, history.verify())
+        except Exception as exc:
+            return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Historical import incomplete',
+                               diagnostic=str(exc), remediation='Inspect blctx index-status; rerun blctx install codex --step history_index.')
 
 
 class CodexHooksStep(Step):
@@ -163,9 +198,9 @@ STEPS = (
     CodexMcpStep("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     CodexSkillsStep("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
     EmbeddingModelStep("embedding_model", "Embedding model available", prerequisites=("data_directory",)),
-    Step("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),
-    Step("history_index", "Historical sessions indexed", history=True,
-         prerequisites=("session_discovery", "embedding_model")),
+    SessionDiscoveryStep("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),
+    HistoryIndexStep("history_index", "Historical sessions indexed", history=True,
+         prerequisites=("session_discovery", "embedding_model", "background_service")),
     Step("service_health", "Service healthy", prerequisites=("background_service", "embedding_model")),
     Step("mcp_health", "MCP connection healthy", prerequisites=("codex_mcp", "service_health")),
     Step("history_retrieval", "Historical memory retrieval verified", history=True,

@@ -28,8 +28,9 @@ def report(command, json_output, no_color, *, no_history=False, step=None, purge
     json_output = json_output or ctx.obj["json_output"]
     no_color = no_color or ctx.obj["no_color"]
     from .embedding import progress
+    from .history import progress as history_progress
     try:
-        with progress(None if json_output else Console(no_color=no_color, highlight=False)):
+        with progress(None if json_output else Console(no_color=no_color, highlight=False)), history_progress(None if json_output else Console(no_color=no_color, highlight=False)):
             results = run_checks(
                 **({"steps": tuple(replace(s, purge=True) for s in UNINSTALL_STEPS)
                    if purge else UNINSTALL_STEPS} if command == "uninstall" else {}),
@@ -59,10 +60,10 @@ def report(command, json_output, no_color, *, no_history=False, step=None, purge
         for result in results:
             symbol, color = symbols[result.status]
             console.print(f" {symbol} {result.label}", style=color, markup=False)
-            console.print(f"   {result.summary}\n", markup=False)
+            console.print(f"   {result.summary}\n", markup=False, soft_wrap=True)
             if result.dependency:
                 console.print("   Prerequisite for selected step.\n")
-            if command == "doctor" or (result.step_id == "embedding_model" and result.status == CheckStatus.FAILED):
+            if command == "doctor" or (result.step_id in ("embedding_model", "session_discovery", "history_index") and result.status == CheckStatus.FAILED):
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
         if command == "uninstall" and success:
             console.print(" Uninstalled.")
@@ -115,7 +116,7 @@ from .explore import explore
 
 main.add_command(explore)
 
-from .retrieval_cli import index_command, index_status, recent, search, context
+from .retrieval_cli import index_command, index_status, recent, search, context, sessions
 
-for command in (index_command, index_status, recent, search, context):
+for command in (index_command, index_status, recent, search, context, sessions):
     main.add_command(command)

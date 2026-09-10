@@ -62,8 +62,7 @@ def index_command(session, root, wait):
         return
     result = call({'operation': 'index', 'sources': sources})
     if wait:
-        from .index import MODEL
-        click.echo(f"Queued {result['job_id']}; indexing {len(sources)} source(s). First use downloads {MODEL}.", err=True)
+        click.echo(f"Queued {result['job_id']}; indexing {len(sources)} source(s). The configured local model runs in the background.", err=True)
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
             result = call({'operation': 'index_status', 'job_id': result.get('job_id') or result['id']})
@@ -110,10 +109,27 @@ def search(query, **options):
 
 
 @click.command('context')
+@click.option('--project', help='Exact project/cwd path.')
+@click.option('--since', help='Inclusive ISO timestamp/date.')
+@click.option('--until', help='Exclusive ISO timestamp/date.')
 @click.option('--char-offset', type=click.IntRange(min=0), default=0, help='Continue a long message; use with --limit 1 and its message --offset.')
 @click.argument('context_id')
 @click.option('--limit', type=click.IntRange(1, 50), default=20)
 @click.option('--offset', type=click.IntRange(0, 100000), default=0)
-def context(context_id, limit, offset, char_offset):
+def context(context_id, limit, offset, char_offset, project, since, until):
     """Expand a result's context_id into stored messages, including commentary."""
-    emit(call({'operation': 'get_context', 'context_id': context_id, 'limit': limit, 'offset': offset, 'char_offset': char_offset}))
+    emit(call({'operation': 'get_context', 'context_id': context_id, 'limit': limit, 'offset': offset, 'char_offset': char_offset, 'project':project, 'since':since, 'until':until}))
+
+
+@click.command('sessions')
+@click.option('--limit', type=click.IntRange(1, 100), default=20)
+@click.option('--offset', type=click.IntRange(min=0), default=0)
+def sessions(limit, offset):
+    """Inspect the registered discovery inventory and per-file compatibility. Emits JSON."""
+    from .discovery import inventory, freshness
+    try:
+        summary, rows = inventory()
+        emit({'inventory':summary, 'freshness':freshness(summary,rows), 'files':rows[offset:offset+limit],
+              'has_more':offset+limit<len(rows), 'next_offset':offset+limit if offset+limit<len(rows) else None})
+    except (OSError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc

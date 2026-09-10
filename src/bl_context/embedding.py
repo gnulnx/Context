@@ -41,9 +41,10 @@ def progress(console=None):
                        DownloadColumn(), TimeRemainingColumn(), console=console)
     task = None
     task_total = None
+    started = False
     previous_stage = None
     def update(stage, completed, total):
-        nonlocal task, task_total, previous_stage
+        nonlocal task, task_total, previous_stage, started
         if not console.is_terminal:
             if stage != previous_stage:
                 console.print(f' {stage}…', markup=False)
@@ -53,17 +54,21 @@ def progress(console=None):
             task = display.add_task(stage, total=total or None, completed=completed)
             task_total = total
             display.start()
+            started = True
         elif task_total != total:
             display.remove_task(task)
             task = display.add_task(stage, total=total or None, completed=completed)
             task_total = total
         else:
             display.update(task, description=stage, completed=completed)
+        if stage in ('Embedding model verified', 'Reusing verified embedding model') and started:
+            display.stop()
+            started = False
     token = progress_callback.set(update)
     try:
         yield
     finally:
-        if task is not None:
+        if started:
             display.stop()
         progress_callback.reset(token)
 

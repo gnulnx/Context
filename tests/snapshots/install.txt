@@ -1,4 +1,5 @@
  Checking cached model…
+ Discovery complete: 0/0 files
 
  Base Layer Context
  Persistent context for coding agents
@@ -21,11 +22,14 @@
    Model cache incomplete and HF_HUB_OFFLINE is set. Retry online to finish the download.
    Run blctx doctor for diagnostics.
 
- ✗ Existing Codex sessions discovered
-   Not implemented
+ ✓ Existing Codex sessions discovered
+   Readable snapshot: 0 sessions in 0 files (0 active, 0 archived); unsupported=0, unclassified=0. Outside snapshot: 0 new files, 0 appended files. Empty history; no historical retrieval claimed.
 
  ✗ Historical sessions indexed
    Prerequisites unavailable
+
+   embedding_model, background_service
+   Resolve the failed prerequisite checks first.
 
  ✗ Service healthy
    Prerequisites unavailable
