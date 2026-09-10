@@ -1,0 +1,13 @@
+
+ Base Layer Context
+ Persistent context for coding agents
+
+ ✗ Data directory initialized
+   Not implemented
+
+   Prerequisite for selected step.
+
+ ✗ Background service installed
+   Prerequisites unavailable
+
+ Selected check failed. Not ready.

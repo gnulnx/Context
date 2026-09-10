@@ -46,3 +46,34 @@ the remaining failures still prevent readiness.
 
 The tests pass when these intentional failures are reported accurately. The
 installer snapshot is the visible contract for subsequent implementation.
+
+### Focused checks
+
+Use `--step STEP_ID` with `install codex`, `status`, or `doctor`:
+
+```console
+blctx install codex --step background_service --json
+blctx status --step data_directory --json
+blctx doctor --step data_directory --no-color
+```
+
+Installation runs prerequisites first and reports them in `dependencies` and on
+individual checks. A failed prerequisite prevents the dependent installer from
+running. Status and doctor only verify the selected step; they never install its
+prerequisites or repair removed state. Full reports retain the onboarding order.
+
+JSON `success` and the process exit code describe the requested checks;
+`ready` requires the complete applicable checklist and is always false for a
+selected run. Passed selected checks exit 0; failed or blocked checks exit 1;
+unknown step IDs and history selections combined with `--no-history` exit 2.
+`--no-history` is also available on status and doctor. Authorized skips carry
+`skip_reason: "no_history"`; summary wording cannot authorize a skip.
+
+Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp`,
+`codex_skills`, `codex_hooks`, `embedding_model`, `session_discovery`,
+`history_index`, `service_health`, `mcp_health`, `history_retrieval`.
+
+Production steps remain unimplemented in this foundation ticket. The subprocess
+acceptance test uses an explicitly test-only file-backed implementation to prove
+selected success and red/green/disconnect/red/reinstall behavior. It does not
+claim that the product installer or uninstaller is implemented.
