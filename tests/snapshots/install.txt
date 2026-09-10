@@ -12,7 +12,7 @@
    Prerequisites unavailable
 
  ✓ Codex skills installed
-   Codex skill base-layer-context v0.1.0 content and ownership verified.
+   Codex skill base-layer-context v0.1.1 content and ownership verified.
 
  ✗ Codex hooks installed
    Not implemented

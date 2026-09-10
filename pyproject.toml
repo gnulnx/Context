@@ -36,3 +36,6 @@ blctx-mcp = "bl_context.mcp_server:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "build", "twine"]
+
+[tool.setuptools.package-data]
+bl_context = ["skills/*/SKILL.md"]
