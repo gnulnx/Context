@@ -1,6 +1,6 @@
 ---
 name: base-layer-context
-description: Retrieve and use Base Layer Context history through recent_context, search_context, and get_context when prior work, decisions, or evidence may matter.
+description: Recall prior work and save or tag visible progress, decisions, and outcomes through Base Layer Context. Use during engineering iteration and when asked to remember, index, or tag recent work.
 metadata:
   short-description: Historical context retrieval with evidence boundaries
 ---
@@ -29,4 +29,14 @@ Cite source file and line references when provided, with a context ID for expans
 
 For pagination, follow `next_offset`; expand truncated individual messages with `get_context`, `limit=1`, the message offset, and `next_char_offset` as `char_offset`. Do not invent missing text or citations. If MCP tools are unavailable, report that limitation and continue with evidence already available for the task.
 
-Session binding and intelligent tagged-update automation are separate integration work. This retrieval skill does not create sessions or log updates automatically.
+## Session and updates
+
+When lifecycle context supplies a binding UUID, call `open_session` with that exact binding and project before substantive work, and retain the returned Context session ID. Reopen the same binding after resume or compaction. Never substitute the Codex source session ID. If no lifecycle binding is available, say that automatic binding is unavailable; for an explicit save request, create a random UUID binding once for this conversation and retain it for retries.
+
+During iteration, save the progress updates you actually show the user with `log_update`. Choose a few useful tags from the task, component, issue, technology, and outcome; reuse existing vocabulary when known. Preserve user-specified tags. Log the visible text with `source_text` set to that exact message so background transcript capture can link provenance and suppress duplicate search results. Small batches are fine, but preserve each message's exact source_text and do not invent extra progress narration merely to populate the index.
+
+Use a fresh UUID `update_id` for each update and reuse it with identical content on retry. `kind` is `status`, `decision`, or `note`; use `authorship=agent_generated` for automatic progress. Never save private thinking, reasoning, setup instructions, or raw tool output. Distinguish a proposal from a completed change or passing test.
+
+For “index/tag our recent work,” use the current conversation, or retrieve earlier work if needed, then save a concise evidence-backed note with useful tags and `authorship=user_requested`. Omit source_text for a newly written summary. User-requested attribution does not establish that the user verified every claim. Do not import all history for a focused save request.
+
+A successful response confirms durable storage; embeddings may still be pending. Continue work without polling for embedding completion. If the service is unavailable, continue the engineering task, acknowledge that saving is unavailable once, and rely on later capture where a transcript exists. Do not claim an unsaved update was stored.

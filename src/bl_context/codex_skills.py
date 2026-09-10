@@ -8,7 +8,7 @@ import tempfile
 from . import storage
 
 SKILL_NAME = 'base-layer-context'
-SKILL_VERSION = '0.1.1'
+SKILL_VERSION = '0.2.0'
 
 
 def source():

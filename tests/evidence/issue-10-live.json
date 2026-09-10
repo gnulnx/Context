@@ -1,0 +1,159 @@
+{
+  "codex_version": "0.154.0",
+  "trust_review": "User reviewed/trusted the actual definitions in Codex /hooks. No bypass or trust writes.",
+  "trust": [
+    {
+      "event": "sessionStart",
+      "trust": "trusted",
+      "enabled": true
+    },
+    {
+      "event": "sessionEnd",
+      "trust": "trusted",
+      "enabled": true
+    },
+    {
+      "event": "stop",
+      "trust": "trusted",
+      "enabled": true
+    }
+  ],
+  "client_calls": {
+    "startup": [
+      {
+        "tool": "open_session",
+        "arguments": {
+          "binding_key": "91b6658e-30cb-4603-a738-00d2683f879b",
+          "project": "/tmp/blctx-hook-acceptance"
+        },
+        "result": {
+          "session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+          "created_at": "2026-09-10T18:13:36.684797+00:00",
+          "reused": false
+        }
+      },
+      {
+        "tool": "log_update",
+        "arguments": {
+          "session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+          "update_id": "f6a4c75d-7ca5-4dc2-8c2b-6c7d74c8e8f1",
+          "kind": "status",
+          "authorship": "user_requested",
+          "source_text": "BLCTX-HOOK-CHECK-3: reviewing the sensor integration checklist.",
+          "text": "BLCTX-HOOK-CHECK-3: reviewing the sensor integration checklist.",
+          "tags": [
+            "blctx-hook-check-3",
+            "sensor-integration",
+            "acceptance-test",
+            "progress"
+          ]
+        },
+        "result": {
+          "update_id": "f6a4c75d-7ca5-4dc2-8c2b-6c7d74c8e8f1",
+          "context_id": "f6a4c75d-7ca5-4dc2-8c2b-6c7d74c8e8f1",
+          "session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+          "stored": true,
+          "reused": false,
+          "indexing_state": "pending",
+          "indexing_error": null
+        }
+      }
+    ],
+    "resume": [
+      {
+        "tool": "open_session",
+        "arguments": {
+          "binding_key": "91b6658e-30cb-4603-a738-00d2683f879b",
+          "project": "/tmp/blctx-hook-acceptance"
+        },
+        "result": {
+          "session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+          "created_at": "2026-09-10T18:13:36.684797+00:00",
+          "reused": true
+        }
+      }
+    ],
+    "fork": [
+      {
+        "tool": "open_session",
+        "arguments": {
+          "binding_key": "db2686b1-bd7f-41df-a3b5-0c4c129c83e7",
+          "project": "/tmp/blctx-hook-acceptance"
+        },
+        "result": {
+          "session_id": "872f4f36-c2d6-4bb3-a5ec-f49bd10aab99",
+          "created_at": "2026-09-10T18:14:42.942156+00:00",
+          "reused": false
+        }
+      }
+    ],
+    "after_compaction": [
+      {
+        "tool": "open_session",
+        "arguments": {
+          "binding_key": "91b6658e-30cb-4603-a738-00d2683f879b",
+          "project": "/tmp/blctx-hook-acceptance"
+        },
+        "result": {
+          "session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+          "created_at": "2026-09-10T18:13:36.684797+00:00",
+          "reused": true
+        }
+      }
+    ]
+  },
+  "capture": {
+    "events": {
+      "SessionEnd": 4,
+      "SessionStart": 5,
+      "Stop": 4
+    },
+    "indexed_sessions": 3,
+    "pending": 0,
+    "errors": 0,
+    "null_transcripts": 0
+  },
+  "doctor": {
+    "schema_version": 1,
+    "command": "doctor",
+    "ready": false,
+    "success": true,
+    "selected_step": "codex_hooks",
+    "dependencies": [],
+    "exit_code": 0,
+    "checks": [
+      {
+        "step_id": "codex_hooks",
+        "label": "Codex hooks installed",
+        "status": "passed",
+        "summary": "Three trusted Codex hooks, lifecycle delivery, and background capture verified.",
+        "diagnostic": "",
+        "remediation": "",
+        "duration": 0.5096446792595088,
+        "skip_reason": null,
+        "dependency": false
+      }
+    ]
+  },
+  "retrieved_update": {
+    "context_session_id": "4d9cf0ed-5147-4500-b2aa-e278fdea1ed8",
+    "source_type": "authored_update",
+    "text": "BLCTX-HOOK-CHECK-3: reviewing the sensor integration checklist.",
+    "tags": [
+      "acceptance-test",
+      "blctx-hook-check-3",
+      "progress",
+      "sensor-integration"
+    ],
+    "source_references": [
+      {
+        "context_id": "d5d886f5-7a64-5bcb-8d82-194ec3d352b8",
+        "timestamp": "2026-09-10T18:13:31.039Z",
+        "path": "/home/gnulnx/.codex/sessions/2026/09/10/rollout-2026-09-10T14-13-26-01a08c86-4be4-7e13-8a19-7ea2decf7040.jsonl",
+        "line": 12,
+        "byte_offset": 80174
+      }
+    ]
+  },
+  "tests": "84 passed with BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1; installed wheel hook/skill tests: 18 passed, 2 opt-in integration tests skipped"
+}

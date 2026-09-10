@@ -67,7 +67,7 @@ def test_preview_classification_and_duplicate_provenance(tmp_path):
     assert records[3]['decision'] == 'excluded'
     assert records[4]['decision'] == 'index'
     assert records[5]['duplicate_of_line'] == 4
-    assert records[6]['decision'] == 'context_only'
+    assert records[6]['decision'] == 'index'
     assert records[7]['decision'] == 'index'
     assert records[8]['decision'] == 'unclassified'
     assert records[9]['decision'] == records[12]['decision'] == 'index'

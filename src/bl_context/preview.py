@@ -84,7 +84,7 @@ def classify_transcript(path):
                 elif role == 'assistant' and phase == 'final_answer':
                     decision, reason = 'index', 'Assistant final answer; a reported claim, not verified fact'
                 elif role == 'assistant' and phase == 'commentary':
-                    decision, reason = 'context_only', 'Progress commentary; available when expanding a turn'
+                    decision, reason = 'index', 'Visible progress update'
                 else:
                     reason = 'Missing or unknown assistant phase'
                 source = metadata.get('source')
@@ -148,7 +148,7 @@ def preview(path, start, limit, details=False):
             original = by_line.get(record['duplicate_of_line'])
             if original and original['decision'] == 'unclassified' and record['phase'] in ('final_answer', 'commentary'):
                 original['phase'] = record['phase']
-                original['decision'] = 'index' if record['phase'] == 'final_answer' else 'context_only'
+                original['decision'] = 'index'
                 if isinstance(data['metadata'].get('source'), dict) and 'subagent' in data['metadata']['source']:
                     original['decision'] = 'context_only'
                 original['reason'] = 'Phase corroborated by duplicate representation'

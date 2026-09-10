@@ -9,6 +9,7 @@ import signal
 import socket
 import stat
 import threading
+import time
 
 from . import storage
 
@@ -91,11 +92,22 @@ def main():
         import sqlite3
         with closing(sqlite3.connect(storage.database_path(paths))) as db:
             initialized = db.execute("SELECT 1 FROM sqlite_master WHERE name='ingest_jobs'").fetchone()
-        if initialized:
+        if initialized or manifest.get('codex_hooks'):
             from .index import Index
             engine = Index(paths)
         logging.info('Ready installation=%s pid=%s', args.installation_id, os.getpid())
+        capture_future = None
+        next_capture = 0
         while not stopping:
+            if time.monotonic() >= next_capture and (capture_future is None or capture_future.done()):
+                next_capture = time.monotonic() + 2
+                with engine_lock:
+                    if engine is None and storage.read_manifest(paths).get('codex_hooks'):
+                        from .index import Index
+                        engine = Index(paths)
+                if engine is not None:
+                    from .capture import reconcile
+                    capture_future = engine.executor.submit(reconcile, engine)
             try:
                 connection, _ = server.accept()
             except socket.timeout:
