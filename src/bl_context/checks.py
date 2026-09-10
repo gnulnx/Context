@@ -79,6 +79,20 @@ class BackgroundServiceStep(Step):
                                remediation="Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.")
 
 
+class CodexMcpStep(Step):
+    def install(self):
+        from . import mcp_registration
+        mcp_registration.install()
+
+    def verify(self):
+        from . import mcp_registration
+        try:
+            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, mcp_registration.verify())
+        except Exception as exc:
+            return CheckResult(self.step_id, self.label, CheckStatus.FAILED, "Codex MCP unavailable",
+                               diagnostic=str(exc), remediation="Run blctx install codex --step codex_mcp.")
+
+
 @dataclass(frozen=True)
 class UninstallStep(Step):
     purge: bool = False
@@ -86,6 +100,8 @@ class UninstallStep(Step):
     def install(self):
         from . import storage
         from . import service
+        from . import mcp_registration
+        mcp_registration.uninstall()
         service.uninstall()
         storage.uninstall(purge=self.purge)
 
@@ -99,7 +115,7 @@ class UninstallStep(Step):
 STEPS = (
     DataDirectoryStep("data_directory", "Data directory initialized"),
     BackgroundServiceStep("background_service", "Background service installed", prerequisites=("data_directory",)),
-    Step("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
+    CodexMcpStep("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     Step("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
     Step("codex_hooks", "Codex hooks installed", prerequisites=("data_directory",)),
     Step("embedding_model", "Embedding model available", prerequisites=("data_directory",)),

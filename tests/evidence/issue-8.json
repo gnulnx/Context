@@ -1,0 +1,584 @@
+[
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "failed",
+          "summary": "Codex MCP unavailable",
+          "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1718/test_mcp_install_lifecycle0/.local/share/bl-context'",
+          "remediation": "Run blctx install codex --step codex_mcp.",
+          "duration": 0.0023969970643520355,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [
+        "data_directory",
+        "background_service"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.06850011879578233,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 2050094).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.3291687713935971,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.10450119199231267,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [
+        "data_directory",
+        "background_service"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.02285347320139408,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 2050094).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.2837549946270883,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.07430810388177633,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.030343072023242712,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.03025959711521864,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.5047355522401631,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "failed",
+          "summary": "Codex MCP unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_mcp.",
+          "duration": 0.002444787882268429,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "failed",
+          "summary": "Codex MCP unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_mcp.",
+          "duration": 0.0024855397641658783,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [
+        "data_directory",
+        "background_service"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.021120192017406225,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 2050664).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.3231668840162456,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.09835897386074066,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "install",
+      "codex",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "install",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [
+        "data_directory",
+        "background_service"
+      ],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "data_directory",
+          "label": "Data directory initialized",
+          "status": "passed",
+          "summary": "Private directories, schema v1, and active ownership verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.020987893920391798,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "background_service",
+          "label": "Background service installed",
+          "status": "passed",
+          "summary": "Enabled user service and daemon identity verified (PID 2050664).",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.28299545496702194,
+          "skip_reason": null,
+          "dependency": true
+        },
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.07523689791560173,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.0320088816806674,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": true,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "passed",
+          "summary": "Owned Codex MCP registration and absolute executable verified.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.03161435900256038,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "uninstall",
+      "codex",
+      "--json"
+    ],
+    "exit_code": 0,
+    "json": {
+      "schema_version": 1,
+      "command": "uninstall",
+      "ready": false,
+      "success": true,
+      "selected_step": null,
+      "dependencies": [],
+      "exit_code": 0,
+      "checks": [
+        {
+          "step_id": "uninstall_codex",
+          "label": "Context installation deactivated",
+          "status": "passed",
+          "summary": "Data installation disconnected.",
+          "diagnostic": "",
+          "remediation": "",
+          "duration": 0.5011003566905856,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "status",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "status",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "failed",
+          "summary": "Codex MCP unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_mcp.",
+          "duration": 0.0024896562099456787,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  },
+  {
+    "command": [
+      "blctx",
+      "doctor",
+      "--step",
+      "codex_mcp",
+      "--json"
+    ],
+    "exit_code": 1,
+    "json": {
+      "schema_version": 1,
+      "command": "doctor",
+      "ready": false,
+      "success": false,
+      "selected_step": "codex_mcp",
+      "dependencies": [],
+      "exit_code": 1,
+      "checks": [
+        {
+          "step_id": "codex_mcp",
+          "label": "Codex MCP registered",
+          "status": "failed",
+          "summary": "Codex MCP unavailable",
+          "diagnostic": "Context installation ownership is inactive.",
+          "remediation": "Run blctx install codex --step codex_mcp.",
+          "duration": 0.002475674729794264,
+          "skip_reason": null,
+          "dependency": false
+        }
+      ]
+    }
+  }
+]

@@ -127,3 +127,41 @@ def test_daemon_refuses_foreign_endpoint(tmp_path):
                             capture_output=True, timeout=5)
     assert result.returncode != 0
     assert endpoint.read_text() == 'unrelated'
+
+
+def test_install_restarts_stale_runtime_only(monkeypatch):
+    storage.install()
+    paths = storage.locations()
+    calls = []
+    monkeypatch.setattr(service, 'manager', lambda *args: calls.append(args) or '')
+    monkeypatch.setattr(service, 'verify', lambda: None)
+    identifier = storage.read_manifest(paths)['installation_id']
+    monkeypatch.setattr(service, 'identity', lambda _: {'installation_id': identifier})
+    service.install()
+    assert ('restart', service.unit_name(storage.read_manifest(paths))) in calls
+    calls.clear()
+    monkeypatch.setattr(service, 'identity', lambda _: {'installation_id': identifier, 'runtime_fingerprint': service.runtime_fingerprint()})
+    service.install()
+    assert not any(c[0] == 'restart' for c in calls)
+
+
+def test_install_migrates_generated_interpreter_but_preserves_custom_unit(monkeypatch):
+    storage.install()
+    paths = storage.locations()
+    manifest = storage.read_manifest(paths)
+    unit = paths['config'] / service.unit_name(manifest)
+    previous = {**manifest, 'interpreter': '/old/environment/bin/python'}
+    unit.write_text(service.unit_text(paths, previous))
+    unit.chmod(0o600)
+    calls = []
+    monkeypatch.setattr(service, 'manager', lambda *args: calls.append(args) or '')
+    monkeypatch.setattr(service, 'identity', lambda _: {'installation_id': manifest['installation_id'], 'runtime_fingerprint': service.runtime_fingerprint()})
+    monkeypatch.setattr(service, 'verify', lambda: None)
+    service.install()
+    assert unit.read_text() == service.unit_text(paths, manifest)
+    assert ('restart', unit.name) in calls
+    modified = unit.read_text().replace('RestartSec=1', 'RestartSec=9')
+    unit.write_text(modified)
+    with pytest.raises(RuntimeError, match='differs'):
+        service.install()
+    assert unit.read_text() == modified

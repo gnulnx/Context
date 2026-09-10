@@ -107,3 +107,13 @@ def doctor(json_output, no_color, step, no_history):
 def uninstall(agent, json_output, no_color, purge):
     """Deactivate installation ownership, retaining data unless --purge is given."""
     report("uninstall", json_output, no_color, purge=purge)
+
+
+from .explore import explore
+
+main.add_command(explore)
+
+from .retrieval_cli import index_command, index_status, recent, search, context
+
+for command in (index_command, index_status, recent, search, context):
+    main.add_command(command)

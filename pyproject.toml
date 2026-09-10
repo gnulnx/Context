@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "Persistent context for coding agents"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["click>=8.1", "rich>=13"]
+dependencies = ["click>=8.1", "rich>=13", "qdrant-client[fastembed]==1.19.0", "fastembed==0.8.0", "mcp==1.30.0", "tomli>=2; python_version < '3.11'"]
 authors = [
     { name = "Base Layer" },
 ]
@@ -32,6 +32,7 @@ where = ["src"]
 [project.scripts]
 blctx = "bl_context.cli:main"
 blctxd = "bl_context.daemon:main"
+blctx-mcp = "bl_context.mcp_server:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "build", "twine"]

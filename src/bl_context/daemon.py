@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import socket
 import stat
+import threading
 
 from . import storage
 
@@ -18,6 +19,8 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    from .runtime_version import runtime_fingerprint
+    fingerprint = runtime_fingerprint()
     storage.verify()
     paths = storage.locations()
     manifest = storage.read_manifest(paths)
@@ -38,6 +41,41 @@ def main():
         stopping = True
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
+    engine = None
+    engine_lock = threading.Lock()
+    slots = threading.BoundedSemaphore(8)
+
+    def handle(connection):
+        nonlocal engine
+        with slots, connection:
+            connection.settimeout(35)
+            try:
+                buffer = bytearray()
+                while not buffer.endswith(b'\n'):
+                    block = connection.recv(min(65536, 1048577 - len(buffer)))
+                    if not block:
+                        raise ValueError('Incomplete request')
+                    buffer.extend(block)
+                    if len(buffer) > 1048576:
+                        raise ValueError('Request exceeds 1 MiB')
+                if buffer == b'identity\n':
+                    response = {'installation_id': args.installation_id, 'pid': os.getpid(), 'protocol_version': 1, 'runtime_fingerprint': fingerprint}
+                else:
+                    request = json.loads(buffer)
+                    if not isinstance(request, dict):
+                        raise ValueError('Expected JSON object')
+                    with engine_lock:
+                        if engine is None:
+                            from .index import Index
+                            engine = Index(paths)
+                    response = engine.submit(request)
+            except Exception as exc:
+                response = {'error': str(exc) or type(exc).__name__}
+            try:
+                connection.sendall(json.dumps(response).encode() + b'\n')
+            except OSError:
+                logging.warning('IPC client disconnected')
+
     server = socket.socket(socket.AF_UNIX)
     try:
         server.bind(str(endpoint))
@@ -49,24 +87,24 @@ def main():
             with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as channel:
                 channel.connect('\0' + notify[1:] if notify.startswith('@') else notify)
                 channel.sendall(b'READY=1')
+        from contextlib import closing
+        import sqlite3
+        with closing(sqlite3.connect(storage.database_path(paths))) as db:
+            initialized = db.execute("SELECT 1 FROM sqlite_master WHERE name='ingest_jobs'").fetchone()
+        if initialized:
+            from .index import Index
+            engine = Index(paths)
         logging.info('Ready installation=%s pid=%s', args.installation_id, os.getpid())
         while not stopping:
             try:
                 connection, _ = server.accept()
             except socket.timeout:
                 continue
-            with connection:
-                connection.settimeout(1)
-                try:
-                    request = connection.recv(1024)
-                    response = {'error': 'Unknown request'}
-                    if request == b'identity\n':
-                        response = {'installation_id': args.installation_id, 'pid': os.getpid(), 'protocol_version': 1}
-                    connection.sendall(json.dumps(response).encode() + b'\n')
-                except (OSError, ValueError):
-                    logging.warning('IPC request failed')
+            threading.Thread(target=handle, args=(connection,), daemon=True).start()
     finally:
         server.close()
+        if engine is not None:
+            engine.close()
         endpoint.unlink(missing_ok=True)
         os.close(writer)
         logging.info('Stopped installation=%s', args.installation_id)
