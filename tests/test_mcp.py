@@ -40,7 +40,21 @@ def test_sessions_and_durable_updates(monkeypatch):
         docs = engine.submit(dict(operation='get_context', context_id=note['update_id']))['results']
         assert len(docs) == 1 and docs[0]['source_type'] == 'authored_update'
         assert docs[0]['authorship'] == 'user_requested'
+        recalled = engine.submit(
+            {'operation': 'search_context', 'query': 'battery test'}
+        )['results']
+        assert recalled[0]['text'] == 'Battery test passed'
+        assert recalled[0]['project'] == '/example'
+        assert recalled[0]['retrieval_mode'] == 'lexical'
+        assert engine.submit(
+            {
+                'operation': 'search_context',
+                'query': 'battery test',
+                'project': '/other',
+            }
+        )['results'] == []
         assert engine.status()['authored_updates_pending'] == 1
+        assert engine.status()['index_state'] == 'syncing'
     finally:
         engine.close()
     engine = Index(storage.locations())
@@ -159,7 +173,15 @@ def test_live_session_updates_over_stdio(tmp_path, install_embedding):
                 assert result['results'][0]['tags'] == ['materials','rover']
                 assert (await call('get_context',dict(context_id=logged['context_id'])))['results'][0]['text'] == note['text']
                 assert (await call('recent_context',{}))['results']
-                assert (await call('context_status',{}))['authored_updates_pending'] == 0
+                deadline = time.monotonic() + 15
+                while True:
+                    status = await call('context_status',{})
+                    if status['authored_updates_pending'] == 0:
+                        break
+                    assert status['index_state'] == 'syncing'
+                    assert time.monotonic() < deadline
+                    await asyncio.sleep(.1)
+                assert status['index_state'] == 'ready'
     try:
         deadline = time.monotonic()+15
         while True:

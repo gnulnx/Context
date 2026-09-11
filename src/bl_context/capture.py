@@ -75,10 +75,12 @@ def receive(event, installation_id, generation):
     if event['hook_event_name'] == 'SessionStart':
         context = (
             'Base Layer Context lifecycle binding (not historical transcript text). '
-            f'Before substantive work, call base-layer-context.open_session with binding_key={json.dumps(binding)} '
-            f'and project={json.dumps(project)}. Reuse the returned Context session_id for this conversation. '
+            'For memory-dependent requests, search global Context before answering; do not guess. '
+            'Read-only recall does not require open_session and should omit the project filter unless the user explicitly asks for project-only results. '
+            f'Before the first log_update only, call base-layer-context.open_session with binding_key={json.dumps(binding)} '
+            f'and project={json.dumps(project)}. Reuse the returned Context session_id for later writes in this conversation. '
             'On resume or compaction reopen the same binding; do not invent a new identity. '
-            'Use the base-layer-context skill to save visible progress and outcomes with useful tags. '
+            'Use the base-layer-context skill for explicit saves and durable decisions or outcomes. '
             'Copy visible progress text exactly into source_text when logging it. Never log private thinking, '
             'reasoning records, raw tool output, or setup instructions. Do not wait for embeddings. '
             'If Context is unavailable, continue the user task and report the limitation without repeated retries.'

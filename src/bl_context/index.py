@@ -1,6 +1,7 @@
 """Daemon-owned local retrieval. SQLite is authoritative; Qdrant is rebuildable."""
 import hashlib
 import json
+import re
 import sqlite3
 import threading
 import uuid
@@ -19,6 +20,14 @@ from .preview import preview
 MODEL = embedding.MODEL
 COLLECTION = 'context_v1'
 POLICY = 'preview-v2-visible-token384-overlap48'
+SELECTION = 'visible-progress-v2'
+QUERY_WORKERS = 3
+REPAIR_BATCH_SIZE = 512
+SEARCH_STOP_WORDS = {
+    'and', 'are', 'did', 'for', 'from', 'has', 'have', 'how', 'into', 'is',
+    'it', 'of', 'on', 'that', 'the', 'this', 'to', 'was', 'were', 'what',
+    'when', 'where', 'which', 'who', 'why', 'with', 'you', 'your',
+}
 
 
 def utcnow():
@@ -41,11 +50,19 @@ class Index:
         self.paths = paths
         storage.prepare_sqlite_wal(paths)
         self.database = storage.database_path(paths)
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='context-index')
+        self.write_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix='context-write'
+        )
+        self.query_executor = ThreadPoolExecutor(
+            max_workers=QUERY_WORKERS, thread_name_prefix='context-query'
+        )
         self.model = None
         self.vectors = None
         self.stopping = threading.Event()
         self.write_lock = threading.RLock()
+        self.model_lock = threading.Lock()
+        self.vectors_lock = threading.Lock()
+        self.repair_lock = threading.Lock()
         with closing(self.connect()) as db, db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -68,6 +85,8 @@ class Index:
                 CREATE INDEX IF NOT EXISTS context_turn ON context_messages(context_id);
                 CREATE TABLE IF NOT EXISTS context_chunks (
                     id TEXT PRIMARY KEY, source TEXT NOT NULL, document TEXT NOT NULL, vector TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS vector_deletes (
+                    id TEXT PRIMARY KEY);
             ''')
             # Upgrade provenance on indexes created before the MCP interface existed.
             migrated_chunks = 0
@@ -88,9 +107,9 @@ class Index:
                 raise RuntimeError('Index model or policy changed; explicit rebuild is required')
             db.execute("INSERT OR IGNORE INTO index_settings VALUES ('configuration', ?)", (configuration,))
             pending = db.execute("SELECT id FROM ingest_jobs WHERE state IN ('queued','running')").fetchall()
-        self.executor.submit(self.retry_updates)
-        for row in pending:
-            self.executor.submit(self.run_job, row[0])
+        self.write_executor.submit(
+            self.recover_background_work, [row[0] for row in pending]
+        )
 
     def connect(self):
         db = sqlite3.connect(self.database, timeout=10)
@@ -116,7 +135,7 @@ class Index:
                     'state': 'queued',
                     '_dispatch_job': identifier,
                 }
-            self.executor.submit(self.run_job, identifier)
+            self.write_executor.submit(self.run_job, identifier)
             return {'job_id': identifier, 'state': 'queued'}
         if operation in ('open_session', 'log_update'):
             with self.write_lock:
@@ -125,7 +144,9 @@ class Index:
             result = self.status(request.get('job_id'))
             result['capture'] = capture.status(self.paths)
             return result
-        return self.executor.submit(self.query, request).result(timeout=30)
+        if operation in ('recent_context', 'get_context'):
+            return self.query(request)
+        return self.query_executor.submit(self.query, request).result(timeout=30)
 
     def status(self, job_id=None):
         with closing(self.connect()) as db:
@@ -139,14 +160,28 @@ class Index:
                 source['report'] = json.loads(source['report'])
                 try:
                     current = Path(source['path']).stat()
-                    source['selection_outdated'] = source['report'].get('selection') != 'visible-progress-v1'
+                    source['selection_outdated'] = source['report'].get('selection') != SELECTION
                     source['changed_since_index'] = source['selection_outdated'] or current.st_size != source['bytes'] or current.st_mtime_ns != source['report'].get('source_mtime_ns')
                     source['missing'] = False
                 except OSError:
                     source['missing'] = True
                     source['changed_since_index'] = True
             jobs = [dict(r) for r in db.execute('SELECT id,state,updated,result FROM ingest_jobs ORDER BY created DESC LIMIT 10')]
-            return {'model': MODEL, 'policy': POLICY, 'authored_updates_pending': db.execute("SELECT count(*) FROM authored_updates WHERE state!='indexed'").fetchone()[0], 'scope': 'Explicitly queued files and authored updates; not a claim of all Codex history', 'sources': sources, 'jobs': jobs,
+            dirty = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()
+            dirty = bool(dirty and dirty[0] != '0')
+            authored_pending = db.execute("SELECT count(*) FROM authored_updates WHERE state!='indexed'").fetchone()[0]
+            deletes_pending = db.execute('SELECT count(*) FROM vector_deletes').fetchone()[0]
+            jobs_pending = db.execute(
+                "SELECT count(*) FROM ingest_jobs WHERE state IN ('queued','running')"
+            ).fetchone()[0]
+            syncing = dirty or bool(authored_pending or deletes_pending or jobs_pending)
+            return {'model': MODEL, 'policy': POLICY,
+                    'index_state': 'syncing' if syncing else 'ready',
+                    'query_mode': 'lexical_fallback' if dirty else 'hybrid',
+                    'authored_updates_pending': authored_pending,
+                    'vector_deletes_pending': deletes_pending,
+                    'scope': 'Single-machine global index; project directories are retained as provenance and optional filters.',
+                    'sources': sources, 'jobs': jobs,
                     'messages': db.execute('SELECT count(*) FROM context_messages').fetchone()[0],
                     'chunks': db.execute('SELECT count(*) FROM context_chunks').fetchone()[0],
                     'oldest_timestamp': db.execute('SELECT min(timestamp) FROM context_messages').fetchone()[0],
@@ -165,12 +200,16 @@ class Index:
 
     def load_model(self):
         embedding.require_active(self.paths)
-        if self.model is None:
+        if self.model is not None:
+            return self.model
+        with self.model_lock:
+            if self.model is not None:
+                return self.model
             embedding.check_files(self.paths)
-            self.model = load_files(embedding.directory(self.paths))
-            model_dir = Path(self.model.model._model_dir)
+            model = load_files(embedding.directory(self.paths))
+            model_dir = Path(model.model._model_dir)
             digest = hashlib.sha256()
-            for filename in (self.model.model.model_description.model_file, 'tokenizer.json'):
+            for filename in (model.model.model_description.model_file, 'tokenizer.json'):
                 with (model_dir / filename).open('rb') as stream:
                     while block := stream.read(1024 * 1024):
                         digest.update(block)
@@ -178,12 +217,13 @@ class Index:
             with closing(self.connect()) as db, db:
                 existing = db.execute("SELECT value FROM index_settings WHERE key='model_fingerprint'").fetchone()
                 if existing and existing[0] != fingerprint:
-                    self.model = None
                     raise RuntimeError('Embedding model files changed; explicit index rebuild is required')
                 db.execute("INSERT OR IGNORE INTO index_settings VALUES ('model_fingerprint',?)", (fingerprint,))
-            self.tokenizer = Tokenizer.from_str(self.model.model.tokenizer.to_str())
-            self.tokenizer.no_truncation()
-            self.tokenizer.no_padding()
+            tokenizer = Tokenizer.from_str(model.model.tokenizer.to_str())
+            tokenizer.no_truncation()
+            tokenizer.no_padding()
+            self.tokenizer = tokenizer
+            self.model = model
         return self.model
 
     def chunk_text(self, text):
@@ -197,30 +237,112 @@ class Index:
                 break
 
     def open_vectors(self):
-        if self.vectors is None:
-            directory, self.vector_baseline = storage.prepare_index_artifacts(self.paths, 'vectors')
-            self.vectors = QdrantClient(path=str(directory))
-        if not self.vectors.collection_exists(COLLECTION):
-            self.vectors.create_collection(COLLECTION, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
-            self.set_dirty(True)
-        with closing(self.connect()) as db:
-            dirty = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()
-        if dirty and dirty[0] != '0':
-            self.vectors.delete_collection(COLLECTION)
-            self.vectors.create_collection(COLLECTION, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
-            with closing(self.connect()) as db:
-                cursor = db.execute('SELECT * FROM context_chunks')
-                while batch := cursor.fetchmany(64):
-                    self.vectors.upsert(COLLECTION, [models.PointStruct(id=r['id'], vector=json.loads(r['vector']), payload=json.loads(r['document'])) for r in batch])
-            with closing(self.connect()) as db, db:
-                db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (dirty[0],))
-        storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
-        self.vector_baseline = {str(p.relative_to(self.paths['data'] / 'vectors')) for p in (self.paths['data'] / 'vectors').rglob('*') if not p.is_dir()}
+        created = False
+        with self.vectors_lock:
+            if self.vectors is None:
+                directory, self.vector_baseline = storage.prepare_index_artifacts(self.paths, 'vectors')
+                self.vectors = QdrantClient(path=str(directory))
+            if not self.vectors.collection_exists(COLLECTION):
+                self.vectors.create_collection(COLLECTION, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
+                self.set_dirty(True)
+                created = True
+        if created:
+            self.write_executor.submit(self.repair_vectors)
         return self.vectors
 
+    def dirty_revision(self):
+        with closing(self.connect()) as db:
+            dirty = db.execute("SELECT value FROM index_settings WHERE key='dirty'").fetchone()
+        return dirty[0] if dirty and dirty[0] != '0' else None
+
+    def repair_vectors(self):
+        """Reconcile the active collection without deleting it or blocking reads."""
+        with self.repair_lock:
+            revision = self.dirty_revision()
+            if revision is None:
+                return False
+            vectors = self.open_vectors()
+            expected = set()
+            with closing(self.connect()) as db:
+                cursor = db.execute('SELECT * FROM context_chunks ORDER BY id')
+                while batch := cursor.fetchmany(REPAIR_BATCH_SIZE):
+                    if self.stopping.is_set():
+                        return False
+                    expected.update(row['id'] for row in batch)
+                    vectors.upsert(COLLECTION, [
+                        models.PointStruct(
+                            id=row['id'],
+                            vector=json.loads(row['vector']),
+                            payload=json.loads(row['document']),
+                        )
+                        for row in batch
+                    ])
+            stale = []
+            offset = None
+            while True:
+                points, offset = vectors.scroll(
+                    COLLECTION,
+                    limit=REPAIR_BATCH_SIZE,
+                    offset=offset,
+                    with_payload=False,
+                    with_vectors=False,
+                )
+                stale.extend(point.id for point in points if str(point.id) not in expected)
+                if offset is None:
+                    break
+            for start in range(0, len(stale), REPAIR_BATCH_SIZE):
+                vectors.delete(
+                    COLLECTION,
+                    models.PointIdsList(points=stale[start:start + REPAIR_BATCH_SIZE]),
+                )
+            with closing(self.connect()) as db, db:
+                cleared = db.execute(
+                    "UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?",
+                    (revision,),
+                ).rowcount
+                if cleared:
+                    db.execute('DELETE FROM vector_deletes')
+            self.record_vector_artifacts()
+            if self.dirty_revision() is not None:
+                self.write_executor.submit(self.repair_vectors)
+            return bool(cleared)
+
+    def record_vector_artifacts(self):
+        storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
+        self.vector_baseline = {
+            str(path.relative_to(self.paths['data'] / 'vectors'))
+            for path in (self.paths['data'] / 'vectors').rglob('*')
+            if not path.is_dir()
+        }
+
+    def recover_background_work(self, pending_jobs):
+        self.repair_vectors()
+        self.retry_updates()
+        for job_id in pending_jobs:
+            if self.stopping.is_set():
+                break
+            self.run_job(job_id)
+        self.repair_vectors()
+
     def set_dirty(self, value):
+        revision = uuid.uuid4().hex if value else '0'
         with closing(self.connect()) as db, db:
-            db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex if value else '0',))
+            db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (revision,))
+        return revision
+
+    def flush_vector_deletes(self, vectors):
+        with closing(self.connect()) as db:
+            identifiers = [row[0] for row in db.execute('SELECT id FROM vector_deletes')]
+        for start in range(0, len(identifiers), REPAIR_BATCH_SIZE):
+            batch = identifiers[start:start + REPAIR_BATCH_SIZE]
+            vectors.delete(COLLECTION, models.PointIdsList(points=batch))
+        if identifiers:
+            with closing(self.connect()) as db, db:
+                db.executemany(
+                    'DELETE FROM vector_deletes WHERE id=?',
+                    ((identifier,) for identifier in identifiers),
+                )
+        return len(identifiers)
 
     def run_job(self, job_id):
         with closing(self.connect()) as db, db:
@@ -264,7 +386,7 @@ class Index:
             previous = db.execute('SELECT * FROM indexed_sources WHERE path=?', (str(path),)).fetchone()
         if previous and context_session_id is None:
             context_session_id = json.loads(previous['report']).get('context_session_id')
-        if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == 'visible-progress-v1':
+        if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == SELECTION:
             return {**json.loads(previous['report']), 'unchanged': True}
         session_id = data['metadata'].get('session_id') or data['metadata'].get('id') or str(path)
         replaced_sources = [str(path)]
@@ -331,7 +453,7 @@ class Index:
             vectors.upsert(COLLECTION, points)
         report = {'path': str(path), 'session_id': session_id, 'messages': len(messages), 'chunks': len(chunks),
                   'snapshot_bytes': size, 'source_mtime_ns': before.st_mtime_ns, 'unclassified': data['counts'].get('unclassified', 0),
-                  'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': 'visible-progress-v1'}
+                  'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': SELECTION}
         with (storage.locked(self.paths) if capture_generation else nullcontext()):
             if capture_generation:
                 current = storage.read_manifest(self.paths)
@@ -352,6 +474,14 @@ class Index:
                         document = json.loads(alias['document'])
                         document.update(decision='context_only',duplicate_of=alias['note_id'])
                         db.execute('UPDATE context_messages SET document=? WHERE id=?',(json.dumps(document),alias['id']))
+                        deleted = db.execute(
+                            "SELECT id FROM context_chunks WHERE json_extract(document,'$.id')=?",
+                            (alias['id'],),
+                        ).fetchall()
+                        db.executemany(
+                            'INSERT OR IGNORE INTO vector_deletes VALUES (?)',
+                            ((row[0],) for row in deleted),
+                        )
                         db.execute("DELETE FROM context_chunks WHERE json_extract(document,'$.id')=?", (alias['id'],))
 
                 db.execute('INSERT OR REPLACE INTO indexed_sources VALUES (?,?,?,?,?)', (str(path), fingerprint, size, utcnow(), json.dumps(report)))
@@ -360,9 +490,14 @@ class Index:
         obsolete = list((old | {r[0] for r in rows}) - actual)
         if obsolete:
             vectors.delete(COLLECTION, models.PointIdsList(points=obsolete))
+            with closing(self.connect()) as db, db:
+                db.executemany(
+                    'DELETE FROM vector_deletes WHERE id=?',
+                    ((identifier,) for identifier in obsolete),
+                )
         with closing(self.connect()) as db, db:
             db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (vector_revision,))
-        storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
+        self.record_vector_artifacts()
         return report
 
     @staticmethod
@@ -433,15 +568,25 @@ class Index:
             # Fast SQL-only aliasing; vector repair is scheduled on the embedding worker.
             with closing(self.connect()) as db, db:
                 rows = db.execute("SELECT id,document FROM context_messages WHERE json_extract(document,'$.source_type')='codex_transcript' AND json_extract(document,'$.context_session_id')=? AND json_extract(document,'$.role')='assistant' AND json_extract(document,'$.text')=?", (session,source_text)).fetchall()
+                deleted_ids = []
                 for row in rows:
                     document = json.loads(row['document'])
                     document.update(decision='context_only', duplicate_of=identifier)
                     db.execute('UPDATE context_messages SET document=? WHERE id=?',(json.dumps(document),row['id']))
+                    deleted = db.execute(
+                        "SELECT id FROM context_chunks WHERE json_extract(document,'$.id')=?",
+                        (row['id'],),
+                    ).fetchall()
+                    deleted_ids.extend(item[0] for item in deleted)
+                    db.executemany(
+                        'INSERT OR IGNORE INTO vector_deletes VALUES (?)',
+                        ((item[0],) for item in deleted),
+                    )
                     db.execute("DELETE FROM context_chunks WHERE json_extract(document,'$.id')=?", (row['id'],))
-                if rows:
+                if deleted_ids:
                     db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex,))
         # Persist the note before scheduling embeddings; downloads never delay acknowledgement.
-        self.executor.submit(self.embed_update, identifier)
+        self.write_executor.submit(self.embed_update, identifier)
         with closing(self.connect()) as db:
             row = db.execute('SELECT state,error FROM authored_updates WHERE id=?', (identifier,)).fetchone()
         return {'update_id': identifier, 'context_id': identifier, 'session_id': session,
@@ -458,7 +603,17 @@ class Index:
     def embed_update(self, identifier):
         try:
             with closing(self.connect()) as db:
-                if db.execute('SELECT state FROM authored_updates WHERE id=?', (identifier,)).fetchone()[0] == 'indexed':
+                state = db.execute('SELECT state FROM authored_updates WHERE id=?', (identifier,)).fetchone()[0]
+                if state == 'indexed':
+                    revision = self.dirty_revision()
+                    if revision is not None:
+                        vectors = self.open_vectors()
+                        if self.flush_vector_deletes(vectors):
+                            with closing(self.connect()) as clean, clean:
+                                clean.execute(
+                                    "UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?",
+                                    (revision,),
+                                )
                     return
                 doc = json.loads(db.execute('SELECT document FROM context_messages WHERE id=?', (identifier,)).fetchone()[0])
             rows = []
@@ -473,13 +628,55 @@ class Index:
                 db.executemany('INSERT OR REPLACE INTO context_chunks VALUES (?,?,?,?)', rows)
                 db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (revision,))
             vectors.upsert(COLLECTION, [models.PointStruct(id=r[0],vector=json.loads(r[3]),payload=json.loads(r[2])) for r in rows])
+            self.flush_vector_deletes(vectors)
             with closing(self.connect()) as db, db:
                 db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (revision,))
                 db.execute("UPDATE authored_updates SET state='indexed',error=NULL WHERE id=?", (identifier,))
-            storage.record_index_artifacts(self.paths, 'vectors', self.vector_baseline)
+            self.record_vector_artifacts()
         except Exception as exc:
             with closing(self.connect()) as db, db:
                 db.execute("UPDATE authored_updates SET state='pending',error=? WHERE id=?", (str(exc), identifier))
+
+    @staticmethod
+    def lexical_terms(query):
+        terms = []
+        for term in re.findall(r"[\w-]+", query.casefold()):
+            if len(term) < 3 or term in SEARCH_STOP_WORDS or term in terms:
+                continue
+            terms.append(term)
+        return terms or [query.casefold().strip()]
+
+    def lexical_search(self, db, query, where, params, limit, offset):
+        terms = self.lexical_terms(query)
+        text = "lower(json_extract(document,'$.text'))"
+        score = ' + '.join(f'CASE WHEN instr({text}, ?) > 0 THEN 1 ELSE 0 END' for _ in terms)
+        matches = ' OR '.join(f'instr({text}, ?) > 0' for _ in terms)
+        source_rank = (
+            "CASE json_extract(document,'$.source_type') "
+            "WHEN 'authored_update' THEN 2 ELSE "
+            "CASE json_extract(document,'$.role') WHEN 'assistant' THEN 1 ELSE 0 END END"
+        )
+        rows = db.execute(
+            f'''SELECT document, ({score}) AS lexical_score,
+                       ({source_rank}) AS source_rank
+                FROM context_messages
+                WHERE {where}
+                  AND json_extract(document,'$.decision')='index'
+                  AND ({matches})
+                ORDER BY lexical_score DESC, source_rank DESC,
+                         timestamp DESC, position DESC
+                LIMIT ? OFFSET ?''',
+            (*terms, *params, *terms, limit + 1, offset),
+        ).fetchall()
+        documents = []
+        for row in rows:
+            document = json.loads(row['document'])
+            document.update(
+                score=row['lexical_score'] / len(terms),
+                retrieval_mode='lexical',
+            )
+            documents.append(document)
+        return documents
 
     def query(self, request):
         operation = request.get('operation')
@@ -524,17 +721,35 @@ class Index:
                 query = request.get('query')
                 if not isinstance(query, str) or not query.strip() or len(query) > 2000:
                     raise ValueError('Query must contain 1..2000 characters')
-                if not db.execute('SELECT 1 FROM context_chunks LIMIT 1').fetchone():
-                    return {'results': [], 'has_more': False, 'coverage': self.coverage()}
+                documents = self.lexical_search(
+                    db, query, where, params, limit, offset
+                )
+                dirty = self.dirty_revision() is not None
                 filters = []
                 if request.get('project'):
                     filters.append(models.FieldCondition(key='project', match=models.MatchValue(value=request['project'])))
                 if request.get('since') or request.get('until'):
                     bounds = models.Range(gte=epoch(request.get('since')), lt=epoch(request.get('until')))
                     filters.append(models.FieldCondition(key='timestamp_epoch', range=bounds))
-                vector = next(self.load_model().query_embed(query)).tolist()
-                points = self.open_vectors().query_points(COLLECTION, query=vector, query_filter=models.Filter(must=filters) if filters else None, limit=limit+1, offset=offset).points
-                documents = [{**p.payload, 'score': p.score} for p in points]
+                if not dirty and db.execute('SELECT 1 FROM context_chunks LIMIT 1').fetchone():
+                    vector = next(self.load_model().query_embed(query)).tolist()
+                    points = self.open_vectors().query_points(
+                        COLLECTION,
+                        query=vector,
+                        query_filter=models.Filter(must=filters) if filters else None,
+                        limit=limit + 1,
+                        offset=offset,
+                    ).points
+                    seen = {document.get('id') for document in documents}
+                    documents.extend(
+                        {
+                            **point.payload,
+                            'score': point.score,
+                            'retrieval_mode': 'semantic',
+                        }
+                        for point in points
+                        if point.payload.get('id') not in seen
+                    )
         with closing(self.connect()) as db:
             def attach(document):
                 for message in document.get('messages', []):
@@ -569,8 +784,7 @@ class Index:
 
     def close(self):
         self.stopping.set()
-        def close_vectors():
-            if self.vectors:
-                self.vectors.close()
-        self.executor.submit(close_vectors).result()
-        self.executor.shutdown(wait=True, cancel_futures=True)
+        self.query_executor.shutdown(wait=True, cancel_futures=True)
+        self.write_executor.shutdown(wait=True, cancel_futures=True)
+        if self.vectors:
+            self.vectors.close()

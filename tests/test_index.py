@@ -3,14 +3,17 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
+import uuid
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from bl_context import storage
-from bl_context.index import Index, epoch
+from bl_context.index import QUERY_WORKERS, Index, epoch
 from bl_context.service import identity
 
 
@@ -39,6 +42,213 @@ def test_index_status_and_query_validation(tmp_path):
         engine.close()
 
 
+def insert_message(engine, identifier, project, text, timestamp):
+    document = {
+        'id': identifier,
+        'context_id': identifier,
+        'source_type': 'authored_update',
+        'source': {'update_id': identifier},
+        'timestamp': timestamp,
+        'timestamp_epoch': epoch(timestamp),
+        'project': project,
+        'role': 'assistant',
+        'text': text,
+        'decision': 'index',
+    }
+    with closing(engine.connect()) as db, db:
+        db.execute(
+            'INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)',
+            (
+                identifier,
+                'update:' + identifier,
+                identifier,
+                0,
+                epoch(timestamp),
+                project,
+                json.dumps(document),
+            ),
+        )
+
+
+def test_lexical_recall_prefers_deliberate_notes_over_raw_transcript_echoes():
+    storage.install()
+    engine = Index(storage.locations())
+    try:
+        insert_message(
+            engine,
+            str(uuid.uuid4()),
+            '/project/a',
+            'The deployment target is Atlas.',
+            '2026-09-10T12:00:00Z',
+        )
+        raw_id = str(uuid.uuid4())
+        with closing(engine.connect()) as db, db:
+            document = {
+                'id': raw_id,
+                'context_id': raw_id,
+                'source_type': 'codex_transcript',
+                'source': {'path': '/transcript.jsonl', 'line': 1},
+                'timestamp': '2026-09-10T13:00:00Z',
+                'timestamp_epoch': epoch('2026-09-10T13:00:00Z'),
+                'project': '/project/a',
+                'role': 'user',
+                'text': 'What is the deployment target?',
+                'decision': 'index',
+            }
+            db.execute(
+                'INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)',
+                (
+                    raw_id,
+                    '/transcript.jsonl',
+                    raw_id,
+                    1,
+                    document['timestamp_epoch'],
+                    document['project'],
+                    json.dumps(document),
+                ),
+            )
+        engine.set_dirty(True)
+
+        result = engine.submit(
+            {'operation': 'search_context', 'query': 'deployment target'}
+        )
+        assert result['results'][0]['text'] == 'The deployment target is Atlas.'
+        assert result['results'][0]['source_type'] == 'authored_update'
+    finally:
+        engine.close()
+
+
+def test_global_recall_is_default_and_project_filter_is_opt_in():
+    storage.install()
+    engine = Index(storage.locations())
+    try:
+        insert_message(
+            engine,
+            str(uuid.uuid4()),
+            '/project/a',
+            'The magic word is Kaboose.',
+            '2026-09-10T12:00:00Z',
+        )
+        insert_message(
+            engine,
+            str(uuid.uuid4()),
+            '/project/b',
+            'Telemetry work finished in the robot project.',
+            '2026-09-10T13:00:00Z',
+        )
+        engine.set_dirty(True)
+
+        global_search = engine.submit(
+            {'operation': 'search_context', 'query': 'magic word'}
+        )
+        assert global_search['results'][0]['text'] == 'The magic word is Kaboose.'
+        assert global_search['results'][0]['project'] == '/project/a'
+        assert global_search['results'][0]['retrieval_mode'] == 'lexical'
+        assert global_search['coverage']['query_mode'] == 'lexical_fallback'
+        assert engine.submit(
+            {
+                'operation': 'search_context',
+                'query': 'magic word',
+                'project': '/project/b',
+            }
+        )['results'] == []
+
+        recent = engine.submit(
+            {
+                'operation': 'recent_context',
+                'since': '2026-09-10T00:00:00Z',
+                'until': '2026-09-11T00:00:00Z',
+            }
+        )
+        assert {item['messages'][0]['project'] for item in recent['results']} == {
+            '/project/a',
+            '/project/b',
+        }
+    finally:
+        engine.close()
+
+
+def test_recall_does_not_wait_for_a_busy_writer():
+    storage.install()
+    engine = Index(storage.locations())
+    release = threading.Event()
+    started = threading.Event()
+
+    def busy_writer():
+        started.set()
+        release.wait(5)
+
+    engine.write_executor.submit(busy_writer)
+    assert started.wait(2)
+    try:
+        insert_message(
+            engine,
+            str(uuid.uuid4()),
+            '/project/a',
+            'The magic word is Kaboose.',
+            '2026-09-10T12:00:00Z',
+        )
+        engine.set_dirty(True)
+        started_at = time.monotonic()
+        assert engine.submit(
+            {'operation': 'search_context', 'query': 'magic word'}
+        )['results']
+        assert engine.submit({'operation': 'recent_context'})['results']
+        assert engine.submit({'operation': 'index_status'})['index_state'] == 'syncing'
+        assert time.monotonic() - started_at < 1
+        assert engine.query_executor._max_workers == QUERY_WORKERS
+        assert engine.write_executor._max_workers == 1
+    finally:
+        release.set()
+        engine.close()
+
+
+def test_dirty_repair_keeps_the_active_collection_and_prunes_only_stale_points():
+    kept = str(uuid.uuid4())
+    stale = str(uuid.uuid4())
+
+    class Vectors:
+        def __init__(self):
+            self.upserts = []
+            self.deleted = []
+
+        def collection_exists(self, _collection):
+            return True
+
+        def upsert(self, _collection, points):
+            self.upserts.extend(points)
+
+        def scroll(self, *_args, **_kwargs):
+            return [SimpleNamespace(id=kept), SimpleNamespace(id=stale)], None
+
+        def delete(self, _collection, selector):
+            self.deleted.extend(selector.points)
+
+        def close(self):
+            pass
+
+    storage.install()
+    engine = Index(storage.locations())
+    engine.write_executor.submit(lambda: None).result(timeout=2)
+    vectors = Vectors()
+    engine.vectors = vectors
+    engine.vector_baseline = set()
+    document = {'id': 'message', 'text': 'durable memory', 'decision': 'index'}
+    with closing(engine.connect()) as db, db:
+        db.execute(
+            'INSERT INTO context_chunks VALUES (?,?,?,?)',
+            (kept, 'source', json.dumps(document), json.dumps([0.0] * 384)),
+        )
+    engine.set_dirty(True)
+    try:
+        assert engine.repair_vectors()
+        assert [point.id for point in vectors.upserts] == [kept]
+        assert vectors.deleted == [stale]
+        assert engine.status()['index_state'] == 'ready'
+    finally:
+        engine.close()
+
+
 def test_index_job_preserves_requested_source_order():
     class DeferredExecutor:
         class Future:
@@ -53,8 +263,8 @@ def test_index_job_preserves_requested_source_order():
 
     storage.install()
     engine = Index(storage.locations())
-    engine.executor.shutdown(wait=True)
-    engine.executor = DeferredExecutor()
+    engine.write_executor.shutdown(wait=True)
+    engine.write_executor = DeferredExecutor()
     try:
         result = engine.submit(
             {
@@ -85,10 +295,10 @@ def test_real_index_lifecycle(tmp_path, install_embedding):
     engine = Index(paths)
     try:
         # All Qdrant operations run on the same owner thread as the daemon uses.
-        first = engine.executor.submit(engine.index_file,a).result(timeout=120)
+        first = engine.write_executor.submit(engine.index_file,a).result(timeout=120)
         assert first['messages'] == 2
-        engine.executor.submit(engine.index_file,b).result(timeout=120)
-        assert engine.executor.submit(engine.index_file,a).result()['unchanged']
+        engine.write_executor.submit(engine.index_file,b).result(timeout=120)
+        assert engine.write_executor.submit(engine.index_file,a).result()['unchanged']
         found = engine.submit({'operation':'search_context','query':'rover electrical power batteries','limit':5,'project':'/project/a'})
         assert found['results'] and all(r['project']=='/project/a' for r in found['results'])
         assert any('lithium' in r['text'] for r in found['results'])
@@ -99,20 +309,20 @@ def test_real_index_lifecycle(tmp_path, install_embedding):
         assert a.read_bytes() == before
         # Rewrite removes obsolete searchable text and produces a new checkpoint.
         source(a, text='The rover now uses a hydrogen fuel cell.')
-        engine.executor.submit(engine.index_file,a).result(timeout=120)
+        engine.write_executor.submit(engine.index_file,a).result(timeout=120)
         expanded = engine.submit({'operation':'get_context','context_id':found['results'][0]['context_id']})
         assert 'hydrogen' in expanded['results'][0]['text']
         assert engine.status()['messages'] == 4
         archived = tmp_path/'archived.jsonl'
         a.rename(archived)
-        engine.executor.submit(engine.index_file,archived).result(timeout=120)
+        engine.write_executor.submit(engine.index_file,archived).result(timeout=120)
         assert engine.status()['messages'] == 4
         assert len(engine.status()['sources']) == 2
         archived.rename(a)
-        engine.executor.submit(engine.index_file,a).result(timeout=120)
+        engine.write_executor.submit(engine.index_file,a).result(timeout=120)
         # Simulate interrupted vector update; SQL remains authoritative.
         engine.set_dirty(True)
-        engine.executor.submit(engine.open_vectors).result()
+        engine.write_executor.submit(engine.repair_vectors).result()
         assert engine.submit({'operation':'search_context','query':'hydrogen fuel cell'})['results']
     finally:
         engine.close()

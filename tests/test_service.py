@@ -40,6 +40,9 @@ def test_daemon_identity_single_writer_and_shutdown(tmp_path):
             'installation_id': manifest['installation_id'],
             'schema_version': storage.VERSION,
             'running_jobs': 0,
+            'authored_updates_pending': 0,
+            'index_state': 'ready',
+            'query_mode': 'hybrid',
         }
         second = subprocess.run(command, capture_output=True, timeout=5)
         assert second.returncode != 0

@@ -72,23 +72,53 @@ def main():
                     if request.get('operation') == 'health':
                         storage.verify()
                         with closing(sqlite3.connect(storage.database_path(paths))) as db:
-                            initialized = db.execute(
+                            jobs_initialized = db.execute(
                                 "SELECT 1 FROM sqlite_master "
                                 "WHERE type='table' AND name='ingest_jobs'"
+                            ).fetchone()
+                            updates_initialized = db.execute(
+                                "SELECT 1 FROM sqlite_master "
+                                "WHERE type='table' AND name='authored_updates'"
+                            ).fetchone()
+                            settings_initialized = db.execute(
+                                "SELECT 1 FROM sqlite_master "
+                                "WHERE type='table' AND name='index_settings'"
                             ).fetchone()
                             running = (
                                 db.execute(
                                     "SELECT count(*) FROM ingest_jobs "
                                     "WHERE state IN ('queued','running')"
                                 ).fetchone()[0]
-                                if initialized
+                                if jobs_initialized
                                 else 0
                             )
+                            pending_updates = (
+                                db.execute(
+                                    "SELECT count(*) FROM authored_updates "
+                                    "WHERE state!='indexed'"
+                                ).fetchone()[0]
+                                if updates_initialized
+                                else 0
+                            )
+                            dirty = (
+                                db.execute(
+                                    "SELECT value FROM index_settings WHERE key='dirty'"
+                                ).fetchone()
+                                if settings_initialized
+                                else None
+                            )
+                            vectors_dirty = bool(dirty and dirty[0] != '0')
+                            syncing = vectors_dirty or bool(running or pending_updates)
                         response = {
                             'status': 'ok',
                             'installation_id': args.installation_id,
                             'schema_version': storage.VERSION,
                             'running_jobs': running,
+                            'authored_updates_pending': pending_updates,
+                            'index_state': 'syncing' if syncing else 'ready',
+                            'query_mode': (
+                                'lexical_fallback' if vectors_dirty else 'hybrid'
+                            ),
                         }
                     else:
                         with engine_lock:
@@ -103,7 +133,7 @@ def main():
             except OSError:
                 logging.warning('IPC client disconnected')
         if dispatch_job:
-            engine.executor.submit(engine.run_job, dispatch_job)
+            engine.write_executor.submit(engine.run_job, dispatch_job)
 
     server = socket.socket(socket.AF_UNIX)
     try:
@@ -130,7 +160,7 @@ def main():
                     if engine is None and storage.read_manifest(paths).get('codex_hooks'):
                         engine = Index(paths)
                 if engine is not None:
-                    capture_future = engine.executor.submit(reconcile, engine)
+                    capture_future = engine.write_executor.submit(reconcile, engine)
             try:
                 connection, _ = server.accept()
             except socket.timeout:

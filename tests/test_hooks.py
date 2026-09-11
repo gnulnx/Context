@@ -38,6 +38,10 @@ def test_binding_duplicates_resume_fork_null_path_and_disconnect(tmp_path):
     with ThreadPoolExecutor(max_workers=8) as workers:
         outputs = list(workers.map(send,[event()]*8))
     assert all(o == outputs[0] for o in outputs)
+    guidance = outputs[0]['hookSpecificOutput']['additionalContext']
+    assert 'search global Context before answering; do not guess' in guidance
+    assert 'Read-only recall does not require open_session' in guidance
+    assert 'Before the first log_update only' in guidance
     assert outputs[0] == send(event(source='resume')) == send(event(source='compact'))
     assert send(event(runtime='fork-b')) != outputs[0]
     assert capture.status(paths)['null_transcripts'] == 2
@@ -147,7 +151,7 @@ def test_fast_ack_while_embedding_worker_is_busy():
     def busy():
         started.set()
         release.wait(5)
-    engine.executor.submit(busy)
+    engine.write_executor.submit(busy)
     assert started.wait(2)
     try:
         start = time.monotonic()
@@ -191,7 +195,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
     capture.receive(event(path),identifier,generation)
     engine = Index(paths)
     try:
-        engine.executor.submit(capture.reconcile,engine).result(timeout=120)
+        engine.write_executor.submit(capture.reconcile,engine).result(timeout=120)
         found = engine.submit(dict(operation='search_context',query='rover battery electrical tests'))['results']
         assert any(r['text'] == progress for r in found)
         assert not any('PRIVATE THINKING' in r['text'] for r in found)
@@ -209,7 +213,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
     capture.receive(event(path,name='Stop'),identifier,generation)
     engine = Index(paths)
     try:
-        engine.executor.submit(capture.reconcile,engine).result(timeout=120)
+        engine.write_executor.submit(capture.reconcile,engine).result(timeout=120)
         assert capture.status(paths)['pending']==0
         # A growing transcript is reconciled even without another hook event.
         embedded = []
@@ -222,7 +226,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
         model.passage_embed = counted
         with path.open('a') as stream:
             stream.write(json.dumps(dict(type='response_item',timestamp='2026-09-10T12:01:00Z',payload=dict(type='message',role='assistant',phase='commentary',content=[dict(type='output_text',text='Final voltage calibration passed.')])) )+'\n')
-        engine.executor.submit(capture.reconcile,engine).result(timeout=120)
+        engine.write_executor.submit(capture.reconcile,engine).result(timeout=120)
         assert engine.submit(dict(operation='search_context',query='voltage calibration'))['results']
         assert embedded == ['Final voltage calibration passed.']
         assert len([r for r in engine.submit(dict(operation='search_context',query='rover battery electrical tests'))['results'] if r['text']==progress])==1
@@ -230,7 +234,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
         count=engine.status()['messages']
         with path.open('a') as stream:
             stream.write(json.dumps(rows[0]).replace(progress,'DO NOT CAPTURE AFTER UNINSTALL')+'\n')
-        engine.executor.submit(capture.reconcile,engine).result(timeout=120)
+        engine.write_executor.submit(capture.reconcile,engine).result(timeout=120)
         assert engine.status()['messages']==count
     finally:
         engine.close()
