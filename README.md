@@ -2,6 +2,11 @@
 
 Persistent context for coding agents.
 
+We meet you where your work.  The console.
+And then we stay out of your way
+
+![blctx demo](assets/demo.gif)
+
 This repository contains the Python package, onboarding CLI, and the first
 local installation, history retrieval, and Codex MCP integration.
 Lifecycle capture and tagged updates are available for local testing; full onboarding acceptance remains under development.
