@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from bl_context import service, storage
+from bl_context import retrieval_cli, service, storage
 
 REAL_BUS = os.environ.get('DBUS_SESSION_BUS_ADDRESS')
 REAL_RUNTIME = os.environ.get('XDG_RUNTIME_DIR')
@@ -34,6 +34,13 @@ def test_daemon_identity_single_writer_and_shutdown(tmp_path):
     try:
         info = wait_for(lambda: service.identity(paths))
         assert info['pid'] == child.pid
+        health = retrieval_cli.call({'operation': 'health'})
+        assert health == {
+            'status': 'ok',
+            'installation_id': manifest['installation_id'],
+            'schema_version': storage.VERSION,
+            'running_jobs': 0,
+        }
         second = subprocess.run(command, capture_output=True, timeout=5)
         assert second.returncode != 0
         assert service.identity(paths) == info

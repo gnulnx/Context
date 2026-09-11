@@ -74,7 +74,14 @@ class InstallerForm:
                 }[result.status]
                 detail = result.summary
                 if self.show_diagnostics or (
-                    result.step_id in ("embedding_model", "history_index")
+                    result.step_id
+                    in (
+                        "embedding_model",
+                        "history_index",
+                        "service_health",
+                        "mcp_health",
+                        "history_retrieval",
+                    )
                     and result.status == CheckStatus.FAILED
                     and result.summary != "Prerequisites unavailable"
                 ):

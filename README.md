@@ -22,10 +22,10 @@ print(bl_context.__version__)
 
 The onboarding CLI uses Click and Rich. The data directory step is implemented
 and tested on Linux, along with the systemd user service and Codex MCP
-registration; the remaining integration checks report failure.
-Full installation starts the Context user service and registers its MCP server.
-History indexing is explicit; the `embedding_model` installer step downloads and
-verifies the local model before indexing can use it.
+registration. Full installation starts the Context user service, registers its
+MCP server, indexes the five most recent Codex sessions, and verifies service,
+MCP, and historical retrieval health. The `embedding_model` installer step
+downloads and verifies the local model before indexing can use it.
 The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
 Use the checkout installation below to test this development version.
 
@@ -42,9 +42,9 @@ python -m ruff check src tests
 python -m pytest -q
 ```
 
-Full install, status, and doctor currently exit 1 because integrations remain
-unimplemented. Selected data checks exit 0 after installation. Uninstall exits 0
-when installation ownership is deactivated.
+Full install, status, and doctor can exit 1 until the separately reviewed Codex
+hooks are trusted. Implemented selected checks exit 0 when healthy. Uninstall
+exits 0 when installation ownership is deactivated.
 Usage errors exit with code 2; help exits with code 0. `--json` emits only a
 structured report, including ordered checks and the exit code. `--no-color`
 disables colors. Both output flags work before the command or after its arguments.
@@ -151,8 +151,8 @@ python -m pytest -q tests/test_storage.py
 
 The test runs the installed `blctx` entry point from `/` with an isolated HOME,
 checks red → green → uninstall → red → reinstall → green, verifies idempotence
-and preservation, and exercises purge. Full readiness stays false while the
-remaining integrations are unimplemented.
+and preservation, and exercises purge. Full readiness remains separate from a
+selected data-only lifecycle check.
 
 
 ### Background service (Linux systemd user session)
@@ -176,9 +176,10 @@ are bounded to 10 and 5 seconds; systemd restarts crashes. Logs are available wi
 
 Verification checks active installation ownership, unit content, persistent
 enablement, registration path, running PID/interpreter/arguments and matching
-identity over private IPC. This proves daemon lifecycle, not indexing or retrieval;
-those checks remain unimplemented. Default uninstall stops the process, disables
-registration, and removes its unit/socket before deactivating ownership.
+identity over private IPC. The separate `service_health` check performs a bounded
+daemon protocol round-trip and validates its private database and installation
+identity. Default uninstall stops the process, disables registration, and removes
+its unit/socket before deactivating ownership.
 
 Ordinary tests isolate Context paths and deliberately use an unavailable service
 bus. To run the real systemd acceptance test in a Linux user session:
@@ -393,8 +394,10 @@ source evidence, and authored notes retain their attribution.
 
 The registered MCP entry point uses stdio; diagnostic logs go to stderr. Tool
 errors report an unavailable daemon or mismatched/inactive installation. The
-`codex_mcp` check verifies saved/effective registration; the separate `mcp_health`
-onboarding step remains pending even though protocol integration tests run here.
+`codex_mcp` check verifies saved/effective registration. The separate `mcp_health`
+check launches that exact command, initializes stdio MCP, verifies all six tools,
+and calls `context_status`. `history_retrieval` then performs semantic search and
+context expansion through MCP and requires source provenance.
 
 ```sh
 # Full real model, daemon, Codex registration and systemd lifecycle acceptance:

@@ -105,7 +105,14 @@ def report(
             if result.dependency:
                 console.print("   Prerequisite for selected step.\n")
             if command == "doctor" or (
-                result.step_id in ("embedding_model", "history_index")
+                result.step_id
+                in (
+                    "embedding_model",
+                    "history_index",
+                    "service_health",
+                    "mcp_health",
+                    "history_retrieval",
+                )
                 and result.status == CheckStatus.FAILED
                 and result.summary != "Prerequisites unavailable"
             ):

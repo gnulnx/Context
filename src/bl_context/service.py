@@ -7,7 +7,7 @@ import stat
 import subprocess
 from pathlib import Path
 
-from . import storage
+from . import retrieval_cli, storage
 from .runtime_version import runtime_fingerprint
 
 
@@ -101,6 +101,27 @@ def verify():
     if command[:-1] != [part.encode() for part in expected]:
         raise RuntimeError('Running executable does not match installation')
     return f'Enabled user service and daemon identity verified (PID {pid}).'
+
+
+def health():
+    verify()
+    paths = storage.locations()
+    manifest = storage.read_manifest(paths)
+    response = retrieval_cli.call({'operation': 'health'})
+    expected = {
+        'status': 'ok',
+        'installation_id': manifest['installation_id'],
+        'schema_version': storage.VERSION,
+    }
+    if any(response.get(key) != value for key, value in expected.items()):
+        raise RuntimeError('Daemon health response does not match this installation')
+    if type(response.get('running_jobs')) is not int or response['running_jobs'] < 0:
+        raise RuntimeError('Daemon health response has an invalid job count')
+    pid = identity(paths)['pid']
+    return (
+        f'Daemon protocol, private database, and installation identity verified '
+        f'(PID {pid}).'
+    )
 
 
 def install():

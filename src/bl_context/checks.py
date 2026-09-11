@@ -11,6 +11,7 @@ from . import (
     embedding,
     history_index,
     mcp_registration,
+    retrieval_health,
     service,
     storage,
 )
@@ -172,6 +173,57 @@ class HistoryIndexStep(Step):
             )
 
 
+class ServiceHealthStep(Step):
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, service.health()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                'Service health unavailable',
+                diagnostic=str(exc),
+                remediation='Run blctx doctor --step background_service.',
+            )
+
+
+class McpHealthStep(Step):
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, mcp_registration.health()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                'MCP connection unavailable',
+                diagnostic=str(exc),
+                remediation='Run blctx doctor --step codex_mcp.',
+            )
+
+
+class HistoryRetrievalStep(Step):
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, retrieval_health.verify()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                'Historical memory retrieval unavailable',
+                diagnostic=str(exc),
+                remediation='Run blctx doctor --step history_retrieval.',
+            )
+
+
 class CodexHooksStep(Step):
     def install(self):
         codex_hooks.install()
@@ -222,10 +274,22 @@ STEPS = (
         history=True,
         prerequisites=("background_service", "session_discovery", "embedding_model"),
     ),
-    Step("service_health", "Service healthy", prerequisites=("background_service", "embedding_model")),
-    Step("mcp_health", "MCP connection healthy", prerequisites=("codex_mcp", "service_health")),
-    Step("history_retrieval", "Historical memory retrieval verified", history=True,
-         prerequisites=("history_index", "mcp_health")),
+    ServiceHealthStep(
+        "service_health",
+        "Service healthy",
+        prerequisites=("background_service", "embedding_model"),
+    ),
+    McpHealthStep(
+        "mcp_health",
+        "MCP connection healthy",
+        prerequisites=("codex_mcp", "service_health"),
+    ),
+    HistoryRetrievalStep(
+        "history_retrieval",
+        "Historical memory retrieval verified",
+        history=True,
+        prerequisites=("history_index", "mcp_health"),
+    ),
     CodexHooksStep("codex_hooks", "Codex hooks installed", prerequisites=("codex_mcp", "codex_skills")),
 )
 
