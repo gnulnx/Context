@@ -148,6 +148,20 @@ def test_hooks_screen_has_a_complete_standard_terminal_layout():
     assert "[Enter] Confirm" in rendered
 
 
+def test_wide_short_hooks_screen_uses_complete_compact_layout():
+    output = StringIO()
+    console = Console(file=output, width=180, height=24, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS, full_screen=True)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert "Automatic Codex capture" in rendered
+    assert "Hooks keep new Codex work" in rendered
+    assert "[Enter] Confirm" in rendered
+    assert len(rendered.splitlines()) <= 22
+
+
 def test_undersized_terminal_gets_resize_notice_instead_of_clipping():
     output = StringIO()
     console = Console(file=output, width=60, height=15, force_terminal=False)

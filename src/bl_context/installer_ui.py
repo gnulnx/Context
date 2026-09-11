@@ -14,6 +14,7 @@ from rich.text import Text
 from .checks import CheckStatus
 
 MAX_PAGE_WIDTH = 112
+SCREEN_ROW_MARGIN = 2
 
 
 class InstallerForm:
@@ -127,7 +128,10 @@ class InstallerForm:
     def page_fits(self, renderable):
         options = self.console.options.update(width=self.console.width, height=None)
         lines = self.console.render_lines(renderable, options, pad=False)
-        return len(lines) <= max(self.console.height, 1)
+        return len(lines) <= self.usable_height()
+
+    def usable_height(self):
+        return max(self.console.height - SCREEN_ROW_MARGIN, 1)
 
     def center_page(self, panel):
         if not self.page_fits(panel):
@@ -141,7 +145,7 @@ class InstallerForm:
             panel,
             vertical="middle" if full_screen else None,
             pad=False,
-            height=self.console.height if full_screen else None,
+            height=self.usable_height() if full_screen else None,
         )
 
     def render_resize_notice(self):
@@ -342,7 +346,7 @@ class InstallerForm:
             title=" Base Layer Context ",
             title_align="left",
             border_style="bright_cyan",
-            padding=(1, 2),
+            padding=(1 if show_details else 0, 2),
             width=self.page_width(),
         )
 
