@@ -29,7 +29,7 @@ The onboarding CLI runs an ordered checklist of 11 distinct subsystem steps to e
 
 ### Stable Step IDs (in execution order)
 1. `data_directory`: Creates mode `0700` user directories and atomic schema v1 in SQLite.
-2. `background_service`: Registers and starts `blctxd` systemd user service.
+2. `background_service`: Registers and starts `blctxd` through systemd on Linux or launchd on macOS.
 3. `codex_mcp`: Registers stdio MCP server in `$CODEX_HOME/config.json`.
 4. `codex_skills`: Installs `base-layer-context` skill into `$CODEX_HOME/skills`.
 5. `embedding_model`: Downloads & cryptographically verifies `BAAI/bge-small-en` (384-dim CPU).
@@ -74,7 +74,7 @@ blctx status --no-history
 
 ## 4. Full Integration & System Acceptance Tests
 
-By default, `pytest` runs isolated unit tests with mock paths and simulated services. To run live systemd user service tests or download real embedding models:
+By default, `pytest` uses isolated storage and simulated service managers. The package workflow builds, lints, and tests the installed wheel on Linux and macOS. To run live user-service tests or download real embedding models:
 
 ```bash
 # Run unit tests only
@@ -83,12 +83,27 @@ python -m pytest -q
 # Opt-in: Run live systemd user session lifecycle tests
 BLCTX_SYSTEMD_TEST=1 python -m pytest -q tests/test_service.py
 
+# Opt-in: Run real macOS LaunchAgent lifecycle tests from a desktop login
+BLCTX_LAUNCHD_TEST=1 python -m pytest -q tests/test_launchd_service.py -k real_launchd
+
 # Opt-in: Run real embedding downloads and vector indexing tests
 BLCTX_INDEX_TEST=1 python -m pytest -q tests/test_index.py
 
 # Opt-in: Full acceptance test suite (Systemd + Live Model + MCP + Hooks)
 BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
 ```
+
+The macOS acceptance test loads only a unique installation-scoped LaunchAgent, verifies identity and health, repeats installation, kills the daemon to verify crash recovery, then uninstalls twice while checking data preservation. It covers spaces in HOME and the Python environment path, plus removal when the plist is already missing. Run it separately from the default suite: `BLCTX_LAUNCHD_TEST=1` intentionally enables the actual user manager. Model/MCP/capture integration tests also run on macOS with `BLCTX_INDEX_TEST=1`.
+
+For local package development on either platform:
+
+```bash
+uv tool install --python 3.11 --editable .
+blctx uninstall codex
+blctx install codex
+```
+
+Source edits make the running daemon stale. Rerun `blctx install codex --step background_service` after editing runtime code. This restarts the daemon only when necessary; repeat installs with unchanged code preserve its PID.
 
 ---
 
@@ -135,7 +150,7 @@ Base Layer Context exposes 6 tools over stdio MCP:
 
 ## 7. Storage Layout & Permission Specifications
 
-All data is stored strictly in user-scoped Linux directories respecting XDG specifications:
+Linux defaults follow XDG conventions:
 
 | Component | Default Path | Mode | Permissions | Content |
 | :--- | :--- | :---: | :---: | :--- |
@@ -144,12 +159,24 @@ All data is stored strictly in user-scoped Linux directories respecting XDG spec
 | **Cache** | `~/.cache/bl-context/` | `0700` | `drwx------` | Pinned FastEmbed model files (`BAAI/bge-small-en`). |
 | **State** | `~/.local/state/bl-context/` | `0700` | `drwx------` | Installation manifest (`installation.json`) and private Unix socket (`daemon.sock`, mode `0600`). |
 
+macOS uses `~/Library/Application Support/bl-context/{data,config,state}` and `~/Library/Caches/bl-context`. The state directory also holds the private `daemon.log`, retained on ordinary uninstall and removed with `--purge`. Absolute XDG overrides work on both platforms. See the README for exact directory overrides and the Unix socket path limit.
+
+### Platform and provider boundaries
+
+`service.py` selects the `systemd_service.py` or `launchd_service.py` backend. Both expose `install`, `verify`, and `uninstall`; shared IPC and readiness polling live in `service_runtime.py`. Neither backend depends on Codex or a model API. `storage.environment()` carries resolved locations to services and agent integrations without relying on the host's shell environment.
+
+`installers.py` retains the independent provider adapter boundary. A future Claude, Gemini, or local-model integration can reuse the service/storage lifecycle while adding its own configuration, transcript discovery, and capture adapters. This change adds macOS support for the existing Codex integration; it does not add those providers yet.
+
+The macOS backend writes a mode `0600` plist in `~/Library/LaunchAgents`, uses `launchctl bootstrap` in `gui/<uid>`, starts at login, and restarts on failure. Startup waits for the private IPC identity and verifies it against the loaded service PID, installation ID, interpreter, and runtime fingerprint. Shutdown waits for deregistration and release of the writer lock before removing the owned plist/socket. Modified definitions and foreign registrations are preserved. An SSH-only session without a GUI login receives an actionable diagnostic.
+
+Design references: [Apple's LaunchAgent lifecycle](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html), the installed `launchctl(1)` manual, and [Codex hook trust](https://developers.openai.com/codex/hooks). `launchctl print` has no guaranteed machine-readable format, so its small property parser fails closed if required identity fields are absent.
+
 ---
 
 ## 8. Uninstallation & Purge
 
 ```bash
-# Standard uninstall: stops systemd service, unregisters MCP, removes hooks, retains data
+# Standard uninstall: stops user service, unregisters MCP, removes hooks, retains data
 blctx uninstall codex
 
 # Complete purge: stops services, removes all owned files and databases (preserves Codex transcripts)

@@ -1,5 +1,4 @@
 """Owned hooks.json registration and independently observed trust/capture checks."""
-import hashlib
 import json
 import os
 import shlex
@@ -11,6 +10,7 @@ from pathlib import Path
 from . import capture, service, storage
 from .codex_probe import query
 from .mcp_registration import config, root
+from .runtime_version import hook_handler_version as handler_version
 
 
 def read(path):
@@ -38,15 +38,8 @@ def write(path, document):
         Path(temporary).unlink(missing_ok=True)
 
 
-def handler_version():
-    digest = hashlib.sha256()
-    for name in ('capture.py', 'hook_handler.py'):
-        digest.update(Path(__file__).with_name(name).read_bytes())
-    return digest.hexdigest()
-
-
 def entries(paths, manifest, generation):
-    env = [f'XDG_{key.upper()}_HOME={value.parent}' for key,value in paths.items()]
+    env = [f'{key}={value}' for key,value in storage.environment(paths).items()]
     command = shlex.join(['/usr/bin/env',*env,manifest['interpreter'],'-m','bl_context.hook_handler',
                           '--installation-id',manifest['installation_id'],'--generation',generation,'--handler-version',handler_version()])
     return {event:{'hooks':[{'type':'command','command':command,'timeout':2}]} for event in capture.EVENTS}

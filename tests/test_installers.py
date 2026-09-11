@@ -343,6 +343,10 @@ def test_navigation_key_reader_preserves_terminal_output_processing(monkeypatch)
         terminal.close()
 
     assert observed[0][tty.OFLAG] & termios.OPOST
+    # Darwin may set PENDIN while restoring canonical input with queued bytes.
+    # It is kernel input bookkeeping, not a terminal setting we changed.
+    restored[tty.LFLAG] &= ~getattr(termios, 'PENDIN', 0)
+    previous[tty.LFLAG] &= ~getattr(termios, 'PENDIN', 0)
     assert restored == previous
 
 

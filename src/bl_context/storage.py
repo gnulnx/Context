@@ -1,4 +1,4 @@
-"""Private Linux storage and the ownership boundary for installation lifecycle."""
+"""Private user storage and the ownership boundary for installation lifecycle."""
 
 import fcntl
 import json
@@ -17,25 +17,61 @@ VERSION = 1
 
 
 def locations():
-    if sys.platform != 'linux':
-        raise RuntimeError('Local installation is currently supported on Linux only.')
+    if sys.platform not in ('linux', 'darwin'):
+        raise RuntimeError('Local installation supports Linux and macOS.')
     home = Path.home()
     if not home.is_absolute():
         raise RuntimeError('HOME must be an absolute path.')
-    defaults = {'data': home / '.local/share', 'config': home / '.config',
-                'cache': home / '.cache', 'state': home / '.local/state'}
+    defaults = {kind: home / base / 'bl-context' for kind, base in {
+        'data': '.local/share', 'config': '.config',
+        'cache': '.cache', 'state': '.local/state',
+    }.items()}
+    if sys.platform == 'darwin':
+        support = home / 'Library/Application Support/bl-context'
+        defaults = {kind: support / kind for kind in ('data', 'config', 'state')}
+        defaults['cache'] = home / 'Library/Caches/bl-context'
     result = {}
     for kind, default in defaults.items():
         base = os.environ.get(f'XDG_{kind.upper()}_HOME', '')
         # XDG relative values are invalid; use the standard fallback.
-        base = Path(base) if base and Path(base).is_absolute() else default
-        safe_path(base)
-        result[kind] = Path(os.path.abspath(base)) / 'bl-context'
+        target = Path(base) / 'bl-context' if base and Path(base).is_absolute() else default
+        # Exact locations pin child processes to the installation even when their
+        # host (launchd, an agent UI, or a shell) supplies a different environment.
+        pinned = os.environ.get(f'BLCTX_{kind.upper()}_DIR', '')
+        if pinned:
+            if not Path(pinned).is_absolute():
+                raise RuntimeError(f'BLCTX_{kind.upper()}_DIR must be absolute.')
+            target = Path(pinned)
+        safe_path(target)
+        result[kind] = Path(os.path.abspath(target))
     paths = list(result.values())
     if any(a == b or a in b.parents or b in a.parents
            for i, a in enumerate(paths) for b in paths[i + 1:]):
         raise RuntimeError('Context data/config/cache/state paths must be separate.')
     return result
+
+
+def environment(paths):
+    """Pass resolved storage locations to any agent or service host.
+
+    Retain the original Linux environment for existing registrations.
+    """
+    return {
+        (f'XDG_{kind.upper()}_HOME' if path.name == 'bl-context' else f'BLCTX_{kind.upper()}_DIR'):
+        str(path.parent if path.name == 'bl-context' else path)
+        for kind, path in paths.items()
+    }
+
+
+def socket_path(paths):
+    endpoint = paths['state'] / 'daemon.sock'
+    limit = 103 if sys.platform == 'darwin' else 107
+    if len(os.fsencode(endpoint)) > limit:
+        raise RuntimeError(
+            'Context state path exceeds the Unix socket limit; use a shorter '
+            'absolute XDG_STATE_HOME or BLCTX_STATE_DIR and reinstall.'
+        )
+    return endpoint
 
 
 def safe_path(path):
@@ -254,6 +290,14 @@ def uninstall(purge=False):
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)
+            if manifest.get('service_log'):
+                log = paths['state'] / 'daemon.log'
+                if manifest['service_log'] != str(log):
+                    raise RuntimeError('Invalid service log ownership')
+                safe_path(log)
+                if log.exists():
+                    private(log)
+                    log.unlink()
             if manifest.get('sqlite_wal'):
                 for suffix in ('-wal', '-shm'):
                     sidecar = Path(str(database_path(paths)) + suffix)

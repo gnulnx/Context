@@ -45,7 +45,7 @@ def run(executable, directory, *args):
 
 def expected(paths, manifest):
     return {'command':manifest['interpreter'], 'args':['-m','bl_context.mcp_server','--installation-id',manifest['installation_id']],
-            'env':{f'XDG_{key.upper()}_HOME':str(path.parent) for key,path in paths.items()}}
+            'env':storage.environment(paths)}
 
 
 def unrelated(document):

@@ -88,7 +88,7 @@ class BackgroundServiceStep(Step):
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED,
                                "Background service unavailable", diagnostic=str(exc),
-                               remediation="Run blctx install codex --step background_service; inspect journalctl --user for daemon logs.")
+                               remediation="Run blctx install codex --step background_service. " + service.diagnostics())
 
 
 class CodexMcpStep(Step):
