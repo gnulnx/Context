@@ -1,6 +1,5 @@
 
- Base Layer Context
- Persistent context for coding agents
+ Base Layer Context - Persistent memory for coding agents
 
  ✓ Data directory initialized
    Private directories, schema v1, and active ownership verified.

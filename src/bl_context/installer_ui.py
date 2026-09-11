@@ -2,8 +2,10 @@
 
 import time
 
+import click
 from rich.console import Group
 from rich.live import Live
+from rich.panel import Panel
 from rich.progress import ProgressBar, Spinner
 from rich.table import Table
 from rich.text import Text
@@ -58,6 +60,92 @@ class InstallerForm:
         self.history_index_progress = (stage, completed, total)
         self.live.update(self.render(), refresh=True)
 
+    def choose_hooks(self):
+        self.live.stop()
+        try:
+            with self.console.screen():
+                selected = 0
+                with Live(
+                    self.render_hooks_consent(selected),
+                    console=self.console,
+                    auto_refresh=False,
+                    transient=False,
+                ) as selector:
+                    while True:
+                        key = click.getchar()
+                        left_key = next(
+                            (
+                                value
+                                for value in ("\x1b[D", "\x1bOD", "\xe0K")
+                                if key.startswith(value)
+                            ),
+                            None,
+                        )
+                        right_key = next(
+                            (
+                                value
+                                for value in ("\x1b[C", "\x1bOC", "\xe0M")
+                                if key.startswith(value)
+                            ),
+                            None,
+                        )
+                        if left_key:
+                            selected = 0
+                            key = key[len(left_key) :]
+                        elif right_key:
+                            selected = 1
+                            key = key[len(right_key) :]
+                        if key in ("\r", "\n"):
+                            return selected == 0
+                        selector.update(
+                            self.render_hooks_consent(selected), refresh=True
+                        )
+        finally:
+            self.live.start(refresh=True)
+
+    def render_hooks_consent(self, selected=0):
+        body = Text.from_markup(
+            "Hooks keep new Codex work available without requiring manual saves.\n\n"
+            "[bold]What is installed[/bold]\n"
+            "  One local handler for session start, turn complete, and session end.\n\n"
+            "[bold yellow]Security[/bold yellow]\n"
+            "  • Hooks can run outside the Codex sandbox.\n"
+            "  • Context can read the current transcript and working directory.\n"
+            "  • Information is indexed into private local storage.\n"
+            "  • Codex separately asks you to review and trust the handler."
+        )
+        choices = Text(justify="center")
+        choices.append(
+            " ▶ Enable automatic capture "
+            if selected == 0
+            else "   Enable automatic capture ",
+            style="bold white on green" if selected == 0 else "dim",
+        )
+        choices.append("      ")
+        choices.append(
+            " ▶ Skip for now " if selected == 1 else "   Skip for now ",
+            style="bold black on yellow" if selected == 1 else "dim",
+        )
+        if selected == 0:
+            feedback = Text.from_markup(
+                "[bold green]Selected: Enable automatic capture.[/bold green] Installs "
+                "the handler; Codex asks for separate trust on its next launch."
+            )
+        else:
+            feedback = Text.from_markup(
+                "[bold yellow]Selected: Skip for now.[/bold yellow] No hooks or automatic "
+                "capture; search, retrieval, and manual saves still work."
+            )
+        return Group(
+            Text("\n Base Layer Context - Automatic Codex capture\n", style="bold"),
+            Panel(body, border_style="cyan", padding=(0, 2)),
+            Text("\n Choose an option", style="bold"),
+            choices,
+            Text("\n"),
+            Text.assemble(" ", feedback),
+            Text("\n  ←/→ Change selection    [Enter] Confirm", style="bold cyan"),
+        )
+
     def render(self):
         table = Table.grid(padding=(0, 1), expand=True)
         table.add_column(width=2)
@@ -90,7 +178,11 @@ class InstallerForm:
                         for value in (detail, result.diagnostic, result.remediation)
                         if value
                     )
-                table.add_row(Text(symbol, style=style), Text(step.label, style=style), detail)
+                table.add_row(
+                    Text(symbol, style=style),
+                    Text(result.label, style=style),
+                    detail,
+                )
             elif self.active_step == step.step_id:
                 detail = ""
                 if step.step_id == "embedding_model" and self.embedding_progress:

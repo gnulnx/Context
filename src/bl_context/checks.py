@@ -2,7 +2,7 @@
 
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
-from time import monotonic
+from time import monotonic, sleep
 
 from . import (
     codex_hooks,
@@ -46,9 +46,13 @@ class Step:
     label: str
     history: bool = False
     prerequisites: tuple[str, ...] = ()
+    optional: bool = False
 
     def install(self) -> None:
         """Reserved for a future implementation; performs no changes."""
+
+    def skip(self) -> None:
+        """Record an explicit skip for an optional installation step."""
 
     def verify(self) -> CheckResult:
         return CheckResult(
@@ -228,12 +232,64 @@ class CodexHooksStep(Step):
     def install(self):
         codex_hooks.install()
 
+    def skip(self):
+        codex_hooks.skip()
+
     def verify(self):
+        if codex_hooks.skipped():
+            return CheckResult(
+                self.step_id,
+                "Codex hooks skipped",
+                CheckStatus.SKIPPED,
+                "Automatic capture remains disabled.",
+                skip_reason="optional",
+            )
         try:
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_hooks.verify())
         except Exception as exc:
+            if codex_hooks.registered():
+                return CheckResult(
+                    self.step_id,
+                    self.label,
+                    CheckStatus.WARNING,
+                    "Installed; approve the hooks at the next Codex launch.",
+                    diagnostic=str(exc),
+                    remediation="Review and trust the three Context entries in Codex.",
+                )
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Codex hooks unavailable',
                                diagnostic=str(exc), remediation='Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.')
+
+
+class FinalizingStep(Step):
+    def install(self):
+        sleep(2.5)
+        paths = storage.locations()
+        with storage.locked(paths):
+            manifest = storage.read_manifest(paths)
+            manifest['installation_finalized'] = True
+            storage.atomic_manifest(paths, manifest)
+
+    def verify(self):
+        try:
+            storage.verify()
+            manifest = storage.read_manifest(storage.locations())
+            if not manifest.get('installation_finalized'):
+                raise RuntimeError('Installation has not completed finalization')
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.PASSED,
+                "Installation complete.",
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                "Installation not finalized",
+                diagnostic=str(exc),
+                remediation="Run blctx install codex.",
+            )
 
 
 @dataclass(frozen=True)
@@ -290,7 +346,17 @@ STEPS = (
         history=True,
         prerequisites=("history_index", "mcp_health"),
     ),
-    CodexHooksStep("codex_hooks", "Codex hooks installed", prerequisites=("codex_mcp", "codex_skills")),
+    CodexHooksStep(
+        "codex_hooks",
+        "Codex hooks installed",
+        prerequisites=("codex_mcp", "codex_skills"),
+        optional=True,
+    ),
+    FinalizingStep(
+        "finalizing",
+        "Finalizing installation",
+        prerequisites=("history_retrieval", "codex_hooks"),
+    ),
 )
 
 UNINSTALL_STEPS = (
@@ -334,6 +400,7 @@ def run_checks(
     selected_step=None,
     on_step_start=None,
     on_result=None,
+    should_install=None,
 ):
     """Install prerequisites first, then independently verify every executed step.
 
@@ -341,6 +408,7 @@ def run_checks(
     transcript order even when installation requires a different execution order.
     """
     steps = STEPS if steps is None else tuple(steps)
+    by_id = {step.step_id: step for step in steps}
     ordered = select_steps(steps, selected_step, install)
     if selected_step and no_history and any(s.history for s in ordered):
         raise ValueError("--step requires history; cannot combine with --no-history")
@@ -355,8 +423,14 @@ def run_checks(
                 "Skipped (--no-history)", skip_reason="no_history",
             )
         else:
-            blocked = [p for p in step.prerequisites
-                       if install and results[p].status != CheckStatus.PASSED]
+            blocked = [
+                prerequisite
+                for prerequisite in step.prerequisites
+                if install
+                and not _result_succeeded(
+                    results[prerequisite], by_id[prerequisite], no_history
+                )
+            ]
             try:
                 if blocked:
                     result = CheckResult(
@@ -366,7 +440,10 @@ def run_checks(
                     )
                 else:
                     if install:
-                        step.install()
+                        if should_install and not should_install(step):
+                            step.skip()
+                        else:
+                            step.install()
                     result = step.verify()
                     if result.step_id != step.step_id:
                         raise ValueError("Verifier returned the wrong step ID")
@@ -386,14 +463,29 @@ def run_checks(
     return [results[s.step_id] for s in display]
 
 
+def _result_succeeded(result, step, no_history):
+    return (
+        result.status == CheckStatus.PASSED
+        or (step.optional and result.status in (CheckStatus.WARNING, CheckStatus.SKIPPED))
+        or (
+            no_history
+            and step.history
+            and result.status == CheckStatus.SKIPPED
+            and result.skip_reason == "no_history"
+        )
+    )
+
+
 def checks_succeeded(results, *, no_history=False, steps=None):
     steps = STEPS if steps is None else steps
-    history_ids = {s.step_id for s in steps if s.history}
+    by_id = {step.step_id: step for step in steps}
     return bool(results) and all(
-        r.status == CheckStatus.PASSED
-        or (no_history and r.step_id in history_ids
-            and r.status == CheckStatus.SKIPPED and r.skip_reason == "no_history")
-        for r in results
+        _result_succeeded(
+            result,
+            by_id.get(result.step_id, Step(result.step_id, result.label)),
+            no_history,
+        )
+        for result in results
     )
 
 

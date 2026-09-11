@@ -33,7 +33,7 @@ def test_json_failures_and_no_changes(args, tmp_path, monkeypatch):
         assert data["ready"] is False
         assert data["exit_code"] == 1
         assert all(c["status"] == "failed" for c in data["checks"])
-        assert all(c["summary"] in ("Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable", "Codex skill unavailable", "Codex hooks unavailable", "Embedding model unavailable", "Codex session discovery unavailable", "Recent Codex history is not indexed", "Service health unavailable", "MCP connection unavailable", "Historical memory retrieval unavailable")
+        assert all(c["summary"] in ("Prerequisites unavailable", "Data installation unavailable", "Background service unavailable", "Codex MCP unavailable", "Codex skill unavailable", "Codex hooks unavailable", "Embedding model unavailable", "Codex session discovery unavailable", "Recent Codex history is not indexed", "Service health unavailable", "MCP connection unavailable", "Historical memory retrieval unavailable", "Installation not finalized")
                    for c in data["checks"])
         assert all(c["duration"] >= 0 for c in data["checks"])
     assert list(tmp_path.iterdir()) == [sentinel]
@@ -47,7 +47,7 @@ def test_no_history():
     assert [c["step_id"] for c in checks if c["status"] == "skipped"] == [
         "session_discovery", "history_index", "history_retrieval",
     ]
-    assert sum(c["status"] == "failed" for c in checks) == 6
+    assert sum(c["status"] == "failed" for c in checks) == 7
 
 
 def test_doctor_explains_failure():

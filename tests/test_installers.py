@@ -4,7 +4,7 @@ from io import StringIO
 import pytest
 from rich.console import Console
 
-from bl_context import checks
+from bl_context import checks, storage
 from bl_context.installer_ui import InstallerForm
 from bl_context.installers import (
     CODEX_PROVIDER,
@@ -99,3 +99,111 @@ def test_live_form_shows_history_index_failure_details():
     rendered = output.getvalue()
     assert "Indexer connection timed out" in rendered
     assert "Retry the history index step." in rendered
+
+
+def test_hooks_consent_screen_explains_security_and_skipping():
+    output = StringIO()
+    console = Console(file=output, width=100, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert "One local handler for session start, turn complete, and session end" in rendered
+    assert "outside the Codex sandbox" in rendered
+    assert "Enable automatic capture" in rendered
+    assert "Skip for now" in rendered
+    assert "←/→ Change selection" in rendered
+    assert "[Enter] Confirm" in rendered
+    assert "Selected: Enable automatic capture" in rendered
+    assert "Show technical details" not in rendered
+
+
+def test_hooks_consent_screen_explains_selected_skip_consequence():
+    output = StringIO()
+    console = Console(file=output, width=100, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render_hooks_consent(selected=1))
+
+    rendered = output.getvalue()
+    normalized = " ".join(rendered.split())
+    assert "Selected: Skip for now" in rendered
+    assert "No hooks or automatic capture" in rendered
+    assert "manual saves still work" in normalized
+
+
+@pytest.mark.parametrize(
+    ("keys", "expected"),
+    [
+        (("\n",), True),
+        (("\x1b[C", "\n"), False),
+        (("\x1b[C\n",), False),
+        (("\x1b[C", "\x1b[D", "\n"), True),
+    ],
+)
+def test_hooks_choice_uses_arrow_keys_and_enter(monkeypatch, keys, expected):
+    console = Console(file=StringIO(), width=100, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    keypresses = iter(keys)
+    monkeypatch.setattr("bl_context.installer_ui.click.getchar", keypresses.__next__)
+    monkeypatch.setattr(form.live, "stop", lambda: None)
+    monkeypatch.setattr(form.live, "start", lambda **kwargs: None)
+
+    assert form.choose_hooks() is expected
+
+
+def test_codex_install_uses_hook_choice(monkeypatch):
+    adapter = CodexInstallerAdapter()
+    seen = []
+
+    monkeypatch.setattr(checks, "run_checks", lambda *args, **kwargs: kwargs)
+    monkeypatch.setattr("bl_context.installers.codex_hooks.registered", lambda: False)
+
+    arguments = adapter.install(choose_hooks=lambda: seen.append("asked") or False)
+
+    hook = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
+    assert arguments["should_install"](hook) is False
+    assert seen == ["asked"]
+
+
+def test_skipped_hooks_use_an_unambiguous_result_label(monkeypatch):
+    monkeypatch.setattr("bl_context.checks.codex_hooks.skipped", lambda: True)
+    step = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
+
+    result = step.verify()
+
+    assert result.status == checks.CheckStatus.SKIPPED
+    assert result.label == "Codex hooks skipped"
+    assert result.summary == "Automatic capture remains disabled."
+
+
+def test_live_form_renders_skipped_hooks_result_label():
+    output = StringIO()
+    console = Console(file=output, width=160, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    form.results["codex_hooks"] = checks.CheckResult(
+        "codex_hooks",
+        "Codex hooks skipped",
+        checks.CheckStatus.SKIPPED,
+        "Automatic capture remains disabled.",
+        skip_reason="optional",
+    )
+
+    console.print(form.render())
+
+    rendered = output.getvalue()
+    assert "–  Codex hooks skipped" in rendered
+    assert "Automatic capture remains disabled." in rendered
+
+
+def test_finalizing_waits_and_records_completion(monkeypatch):
+    storage.install()
+    waits = []
+    monkeypatch.setattr(checks, "sleep", waits.append)
+    step = next(step for step in checks.STEPS if step.step_id == "finalizing")
+
+    step.install()
+
+    assert waits == [2.5]
+    assert step.verify().status == checks.CheckStatus.PASSED

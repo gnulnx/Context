@@ -64,6 +64,8 @@ def report(
                 "on_step_start": live_form.start_step,
                 "on_result": live_form.finish_step,
             }
+            if command == "install":
+                observers["choose_hooks"] = live_form.choose_hooks
         else:
             progress_context = progress(console)
             history_progress_context = history_progress()
