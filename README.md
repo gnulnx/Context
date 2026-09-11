@@ -47,7 +47,9 @@ hooks are trusted. Implemented selected checks exit 0 when healthy. Uninstall
 exits 0 when installation ownership is deactivated.
 Usage errors exit with code 2; help exits with code 0. `--json` emits only a
 structured report, including ordered checks and the exit code. `--no-color`
-disables colors. Both output flags work before the command or after its arguments.
+selects plain, non-animated output and disables colors. Interactive plain installs
+use a simple text prompt for the optional hooks. Both output flags work before the
+command or after its arguments.
 `--no-history` skips the three history checks without claiming they passed;
 the remaining failures still prevent readiness.
 
