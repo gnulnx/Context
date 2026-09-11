@@ -176,7 +176,6 @@ Context enforces strict file permission boundaries:
 ## Documentation & Contributing
 
 * **[Developer & Contributor Guide](docs/DEVELOPMENT.md):** Test harnesses, systemd integration testing, focused step flags (`--step`), and MCP tool specifications.
-* **[UX Review & Product Roadmap](docs/UXReview.md):** In-depth UX scorecards, friction analysis, and architectural recommendations.
 
 ---
 
