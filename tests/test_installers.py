@@ -1,11 +1,16 @@
+import os
+import pty
+import termios
+import threading
 import time
+import tty
 from io import StringIO
 
 import pytest
 from rich.console import Console
 
 from bl_context import checks, storage
-from bl_context.installer_ui import InstallerForm
+from bl_context.installer_ui import InstallerForm, read_navigation_key
 from bl_context.installers import (
     CODEX_PROVIDER,
     CodexInstallerAdapter,
@@ -162,24 +167,6 @@ def test_wide_short_hooks_screen_uses_complete_compact_layout():
     assert len(rendered.splitlines()) <= 22
 
 
-def test_hooks_screen_uses_absolute_center_without_leading_blank_rows():
-    output = StringIO()
-    console = Console(
-        file=output,
-        width=197,
-        height=51,
-        force_terminal=True,
-        color_system=None,
-    )
-    form = InstallerForm(console, checks.STEPS, full_screen=True)
-
-    console.print(form.render_hooks_consent())
-
-    rendered = output.getvalue()
-    assert rendered.startswith("\x1b[2J\x1b[13;43H╭")
-    assert "Automatic Codex capture" in rendered
-
-
 def test_undersized_terminal_gets_resize_notice_instead_of_clipping():
     output = StringIO()
     console = Console(file=output, width=60, height=15, force_terminal=False)
@@ -250,13 +237,48 @@ def test_hooks_choice_uses_arrow_keys_and_enter(monkeypatch, keys, expected):
     console = Console(file=StringIO(), width=100, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     keypresses = iter(keys)
-    monkeypatch.setattr("bl_context.installer_ui.click.getchar", keypresses.__next__)
+    monkeypatch.setattr(
+        "bl_context.installer_ui.read_navigation_key", keypresses.__next__
+    )
     pages = []
     monkeypatch.setattr(form.live, "refresh", lambda: pages.append(form.current_page))
 
     assert form.choose_hooks() is expected
     assert "hooks" in pages
     assert pages[-1] == "installer"
+
+
+def test_navigation_key_reader_preserves_terminal_output_processing(monkeypatch):
+    master, slave = pty.openpty()
+    terminal = os.fdopen(slave, "r", encoding="utf-8", closefd=True)
+    previous = termios.tcgetattr(terminal.fileno())
+    observed = []
+    original_setcbreak = tty.setcbreak
+    cbreak_ready = threading.Event()
+
+    def record_cbreak(file_descriptor):
+        original_setcbreak(file_descriptor)
+        observed.append(termios.tcgetattr(file_descriptor))
+        cbreak_ready.set()
+
+    def write_arrow_key():
+        cbreak_ready.wait()
+        os.write(master, b"\x1b[C")
+
+    monkeypatch.setattr("bl_context.installer_ui.sys.stdin", terminal)
+    monkeypatch.setattr("bl_context.installer_ui.tty.setcbreak", record_cbreak)
+    writer = threading.Thread(target=write_arrow_key)
+    writer.start()
+    try:
+        assert read_navigation_key() == "\x1b[C"
+        restored = termios.tcgetattr(terminal.fileno())
+    finally:
+        writer.join()
+        os.close(master)
+        terminal.close()
+
+    assert observed[0][tty.OFLAG] & termios.OPOST
+    assert restored == previous
 
 
 def test_codex_install_uses_hook_choice(monkeypatch):

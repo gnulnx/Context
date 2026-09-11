@@ -1,11 +1,13 @@
 """Responsive terminal screens for ordered installer feedback."""
 
+import os
+import sys
+import termios
 import time
+import tty
 
-import click
 from rich.align import Align
 from rich.console import Group
-from rich.control import Control
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import ProgressBar, Spinner
@@ -16,6 +18,31 @@ from .checks import CheckStatus
 
 MAX_PAGE_WIDTH = 112
 SCREEN_ROW_MARGIN = 2
+
+
+def read_navigation_key():
+    """Read one key without disabling terminal output processing."""
+    terminal = None
+    if sys.stdin.isatty():
+        file_descriptor = sys.stdin.fileno()
+    else:
+        terminal = open("/dev/tty")
+        file_descriptor = terminal.fileno()
+    previous = termios.tcgetattr(file_descriptor)
+    try:
+        tty.setcbreak(file_descriptor)
+        key = os.read(file_descriptor, 32).decode(
+            sys.stdin.encoding or "utf-8", "replace"
+        )
+    finally:
+        termios.tcsetattr(file_descriptor, termios.TCSADRAIN, previous)
+        if terminal is not None:
+            terminal.close()
+    if key == "\x03":
+        raise KeyboardInterrupt
+    if key == "\x04":
+        raise EOFError
+    return key
 
 
 class InstallerForm:
@@ -91,7 +118,7 @@ class InstallerForm:
         self.live.refresh()
         try:
             while True:
-                key = click.getchar()
+                key = read_navigation_key()
                 left_key = next(
                     (
                         value
@@ -148,14 +175,6 @@ class InstallerForm:
             pad=False,
             height=self.usable_height() if full_screen else None,
         )
-
-    def position_screen_page(self, panel):
-        """Center a full-screen page without scrolling through blank rows."""
-        options = self.console.options.update(width=self.console.width, height=None)
-        height = len(self.console.render_lines(panel, options, pad=False))
-        left = max((self.console.width - self.page_width()) // 2, 0)
-        top = max((self.usable_height() - height) // 2, 0)
-        return Group(Control.clear(), Control.move_to(left, top), panel)
 
     def render_resize_notice(self):
         width = max(8, min(62, self.console.width - 2))
@@ -253,10 +272,10 @@ class InstallerForm:
     def render_hooks_consent(self, selected=0):
         full = self.hooks_panel(selected)
         if self.page_fits(full):
-            return self.position_screen_page(full)
+            return self.align_page(full, full_screen=True)
         compact = self.hooks_panel(selected, compact=True)
         if self.page_fits(compact):
-            return self.position_screen_page(compact)
+            return self.align_page(compact, full_screen=True)
         return self.render_resize_notice()
 
     def result_detail(self, result):
