@@ -282,6 +282,24 @@ def verify_uninstalled():
         raise RuntimeError('Context installation ownership is still active.')
 
 
+def cancel_pending_index_jobs(paths=None):
+    """An explicit uninstall disconnects durable work before it can replay."""
+    paths = paths or locations()
+    database = database_path(paths)
+    if not database.exists():
+        return 0
+    with closing(sqlite3.connect(database, timeout=10)) as db, db:
+        exists = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ingest_jobs'"
+        ).fetchone()
+        if not exists:
+            return 0
+        return db.execute(
+            "UPDATE ingest_jobs SET state='superseded' "
+            "WHERE state IN ('queued','running')"
+        ).rowcount
+
+
 def prepare_index_artifacts(paths, kind):
     """Claim a new dedicated directory, never adopt unrelated existing files."""
     directory = paths['data'] / 'vectors' if kind == 'vectors' else paths['cache'] / 'embeddings'

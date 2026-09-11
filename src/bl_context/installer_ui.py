@@ -21,7 +21,8 @@ class InstallerForm:
         self.results = {}
         self.active_step = None
         self.embedding_progress = None
-        self.progress_started = None
+        self.history_index_progress = None
+        self.progress_started = {}
         self.live = Live(
             self.render(),
             console=console,
@@ -48,9 +49,13 @@ class InstallerForm:
         self.live.update(self.render(), refresh=True)
 
     def update_embedding(self, stage, completed, total):
-        if self.progress_started is None:
-            self.progress_started = time.monotonic()
+        self.progress_started.setdefault("embedding_model", time.monotonic())
         self.embedding_progress = (stage, completed, total)
+        self.live.update(self.render(), refresh=True)
+
+    def update_history_index(self, stage, completed, total):
+        self.progress_started.setdefault("history_index", time.monotonic())
+        self.history_index_progress = (stage, completed, total)
         self.live.update(self.render(), refresh=True)
 
     def render(self):
@@ -69,8 +74,9 @@ class InstallerForm:
                 }[result.status]
                 detail = result.summary
                 if self.show_diagnostics or (
-                    result.step_id == "embedding_model"
+                    result.step_id in ("embedding_model", "history_index")
                     and result.status == CheckStatus.FAILED
+                    and result.summary != "Prerequisites unavailable"
                 ):
                     detail = "\n".join(
                         value
@@ -82,6 +88,8 @@ class InstallerForm:
                 detail = ""
                 if step.step_id == "embedding_model" and self.embedding_progress:
                     detail = self.render_embedding_progress()
+                elif step.step_id == "history_index" and self.history_index_progress:
+                    detail = self.render_history_index_progress()
                 table.add_row(Spinner("dots", style="cyan"), Text(step.label, style="cyan"), detail)
             else:
                 table.add_row(Text("○", style="dim"), Text(step.label, style="dim"), "")
@@ -97,7 +105,9 @@ class InstallerForm:
         details.add_column(width=24)
         details.add_column()
         details.add_column()
-        elapsed = max(time.monotonic() - self.progress_started, 0.001)
+        elapsed = max(
+            time.monotonic() - self.progress_started["embedding_model"], 0.001
+        )
         rate = completed / elapsed
         remaining = max(total - completed, 0)
         eta = f"{remaining / rate:.0f}s" if rate and remaining else "0s"
@@ -106,5 +116,18 @@ class InstallerForm:
             ProgressBar(total=total or 1, completed=completed, width=24),
             f"{completed / 1_000_000:.1f}/{total / 1_000_000:.1f} MB",
             eta,
+        )
+        return details
+
+    def render_history_index_progress(self):
+        stage, completed, total = self.history_index_progress
+        details = Table.grid(padding=(0, 1))
+        details.add_column()
+        details.add_column(width=24)
+        details.add_column()
+        details.add_row(
+            stage,
+            ProgressBar(total=total or 1, completed=completed, width=24),
+            f"{completed}/{total} sessions" if total else "0 sessions",
         )
         return details

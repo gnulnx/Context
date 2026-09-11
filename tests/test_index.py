@@ -39,6 +39,40 @@ def test_index_status_and_query_validation(tmp_path):
         engine.close()
 
 
+def test_index_job_preserves_requested_source_order():
+    class DeferredExecutor:
+        class Future:
+            def result(self):
+                return None
+
+        def submit(self, *_args, **_kwargs):
+            return self.Future()
+
+        def shutdown(self, **_kwargs):
+            pass
+
+    storage.install()
+    engine = Index(storage.locations())
+    engine.executor.shutdown(wait=True)
+    engine.executor = DeferredExecutor()
+    try:
+        result = engine.submit(
+            {
+                "operation": "index",
+                "sources": ["/newest.jsonl", "/older.jsonl", "/newest.jsonl"],
+            },
+            defer_index=True,
+        )
+        assert result["_dispatch_job"] == result["job_id"]
+        with closing(engine.connect()) as db:
+            row = db.execute(
+                "SELECT sources FROM ingest_jobs WHERE id=?", (result["job_id"],)
+            ).fetchone()
+        assert json.loads(row[0]) == ["/newest.jsonl", "/older.jsonl"]
+    finally:
+        engine.close()
+
+
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Explicit real FastEmbed integration test')
 def test_real_index_lifecycle(tmp_path, install_embedding):
     storage.install()

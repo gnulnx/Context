@@ -51,6 +51,7 @@ def main():
 
     def handle(connection):
         nonlocal engine
+        dispatch_job = None
         with slots, connection:
             connection.settimeout(35)
             try:
@@ -71,13 +72,16 @@ def main():
                     with engine_lock:
                         if engine is None:
                             engine = Index(paths)
-                    response = engine.submit(request)
+                    response = engine.submit(request, defer_index=True)
+                    dispatch_job = response.pop('_dispatch_job', None)
             except Exception as exc:
                 response = {'error': str(exc) or type(exc).__name__}
             try:
                 connection.sendall(json.dumps(response).encode() + b'\n')
             except OSError:
                 logging.warning('IPC client disconnected')
+        if dispatch_job:
+            engine.executor.submit(engine.run_job, dispatch_job)
 
     server = socket.socket(socket.AF_UNIX)
     try:

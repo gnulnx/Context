@@ -91,6 +91,20 @@ snapshot:
 blctx install codex --step session_discovery
 ```
 
+The following `history_index` step sends those five paths to the existing
+single-writer daemon in newest-first order and waits for its durable job. The
+installer keeps one progress bar inside the `Historical sessions indexed` row;
+it does not start five competing model/Qdrant writers. Completed source
+checkpoints make reruns inexpensive, and append-only growth in a live Codex
+transcript reuses its cryptographically verified indexed prefix instead of
+chasing a file that is still growing. Explicit uninstall supersedes queued or
+running history jobs so reinstall cannot revive an old all-history backlog;
+completed index data remains available for fast verification and reuse.
+
+```console
+blctx install codex --step history_index
+```
+
 The data step has a real subprocess acceptance test covering install, status,
 doctor, uninstall, reinstall and purge. The execution foundation also retains
 a test-only file-backed fixture for generic dependency behavior.

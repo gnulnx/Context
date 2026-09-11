@@ -51,7 +51,7 @@ def test_live_form_contains_all_steps_and_inline_embedding_progress():
     console = Console(file=output, width=160, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.active_step = "embedding_model"
-    form.progress_started = time.monotonic() - 1
+    form.progress_started["embedding_model"] = time.monotonic() - 1
     form.embedding_progress = ("Downloading embedding model", 50_000_000, 100_000_000)
 
     console.print(form.render())
@@ -61,3 +61,41 @@ def test_live_form_contains_all_steps_and_inline_embedding_progress():
     model_row = next(line for line in rendered.splitlines() if "Embedding model" in line)
     assert "Downloading embedding model" in model_row
     assert "50.0/100.0 MB" in model_row
+
+
+def test_live_form_keeps_history_progress_in_its_step_row():
+    output = StringIO()
+    console = Console(file=output, width=160, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    form.active_step = "history_index"
+    form.history_index_progress = ("Indexing recent sessions", 3, 5)
+
+    console.print(form.render())
+    rendered = output.getvalue()
+
+    assert all(step.label in rendered for step in checks.STEPS)
+    history_row = next(
+        line for line in rendered.splitlines() if "Historical sessions indexed" in line
+    )
+    assert "Indexing recent sessions" in history_row
+    assert "3/5 sessions" in history_row
+
+
+def test_live_form_shows_history_index_failure_details():
+    output = StringIO()
+    console = Console(file=output, width=160, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    form.results["history_index"] = checks.CheckResult(
+        "history_index",
+        "Historical sessions indexed",
+        checks.CheckStatus.FAILED,
+        "Recent Codex history is not indexed",
+        diagnostic="Indexer connection timed out",
+        remediation="Retry the history index step.",
+    )
+
+    console.print(form.render())
+
+    rendered = output.getvalue()
+    assert "Indexer connection timed out" in rendered
+    assert "Retry the history index step." in rendered

@@ -97,7 +97,7 @@ class Index:
         db.row_factory = sqlite3.Row
         return db
 
-    def submit(self, request):
+    def submit(self, request, *, defer_index=False):
         operation = request.get('operation')
         if operation == 'index':
             sources = request.get('sources')
@@ -106,9 +106,16 @@ class Index:
             if any(not isinstance(p, str) or not Path(p).is_absolute() or Path(p).suffix != '.jsonl' for p in sources):
                 raise ValueError('Sources must be absolute JSONL paths')
             identifier = str(uuid.uuid4())
+            unique_sources = list(dict.fromkeys(sources))
             with closing(self.connect()) as db, db:
                 db.execute('INSERT INTO ingest_jobs VALUES (?,?,?,?,?,?)',
-                           (identifier, 'queued', json.dumps(sorted(set(sources))), utcnow(), utcnow(), '{}'))
+                           (identifier, 'queued', json.dumps(unique_sources), utcnow(), utcnow(), '{}'))
+            if defer_index:
+                return {
+                    'job_id': identifier,
+                    'state': 'queued',
+                    '_dispatch_job': identifier,
+                }
             self.executor.submit(self.run_job, identifier)
             return {'job_id': identifier, 'state': 'queued'}
         if operation in ('open_session', 'log_update'):
@@ -127,7 +134,7 @@ class Index:
                 if not row:
                     raise ValueError('Unknown job ID')
                 return {**dict(row), 'sources': json.loads(row['sources']), 'result': json.loads(row['result'])}
-            sources = [dict(r) for r in db.execute('SELECT path, bytes, indexed_at, report FROM indexed_sources ORDER BY path')]
+            sources = [dict(r) for r in db.execute('SELECT path, digest, bytes, indexed_at, report FROM indexed_sources ORDER BY path')]
             for source in sources:
                 source['report'] = json.loads(source['report'])
                 try:
