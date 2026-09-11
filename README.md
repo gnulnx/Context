@@ -7,8 +7,8 @@ And then we stay out of your way
 
 ![blctx demo](assets/demo.gif)
 
-This repository contains the Python package, onboarding CLI, and the first
-local installation, history retrieval, and Codex MCP integration.
+This repository contains the Python package, onboarding CLI, and a private,
+single-machine global history index with Codex MCP integration.
 Lifecycle capture and tagged updates are available for local testing; full onboarding acceptance remains under development.
 
 ## Install
@@ -259,11 +259,14 @@ request or answer are explicitly flagged. Classification lives separately in
 
 ### Index and query local history
 
-The first retrieval implementation uses **BAAI/bge-small-en** through FastEmbed
-on CPU, with Qdrant local storage owned by `blctxd`. SQLite stores normalized
+The first retrieval implementation is one private, machine-global index. It uses
+**BAAI/bge-small-en** through FastEmbed on CPU, with Qdrant local storage owned
+by `blctxd`. SQLite stores normalized
 messages, provenance, import checkpoints, durable jobs, and rebuildable vectors.
 The tested Qdrant/FastEmbed versions are pinned. The actual model/tokenizer
-fingerprint is recorded to prevent silently mixing different embeddings.
+fingerprint is recorded to prevent silently mixing different embeddings. A
+session's working directory is retained as provenance and an optional explicit
+filter; it is not a default visibility boundary.
 
 ```sh
 source .venv/bin/activate
@@ -289,6 +292,14 @@ These commands emit JSON. Index requests return a durable job ID immediately;
 the job keeps running: inspect it with `blctx index-status JOB_ID`. Indexing and
 queries use only the configured, verified local model and never initiate a model
 download. Embedding inference is local; no transcript text is sent to an API.
+Reads use three query workers independently of the single serialized embedding/
+Qdrant writer. While vector reconciliation is running, recent/context reads stay
+available from SQLite and search uses lexical fallback. Repair upserts the active
+collection in batches and prunes stale points without dropping the collection.
+`context_status` and service health report `index_state` and `query_mode` so
+background synchronization is visible instead of appearing as a timeout.
+Focused MCP search defaults to five results and ranks deliberate authored notes
+ahead of raw transcript echoes when lexical relevance is otherwise equal.
 
 ### Download and verify the embedding model
 
@@ -364,8 +375,9 @@ collision or a modified owned entry. Repeat installation is idempotent.
 `blctx uninstall codex` removes the owned registration before stopping the service;
 retained data alone does not satisfy the installed check.
 
-Start a **new Codex conversation** after registration and ask it to use
-`base-layer-context` to summarize work from the last few days. Import reviewed
+Start a **new Codex conversation** after registration and ask it to summarize
+work from the last few days. Recall is global by default, so this works from any
+directory on the machine without opening a Context write session first. Import reviewed
 transcripts first using `blctx index ... --wait`; registration does not import all
 history. Six tools are available:
 
@@ -373,12 +385,14 @@ history. Six tools are available:
 | --- | --- |
 | `context_status` | Inspect coverage, freshness, import jobs, pending note embeddings |
 | `recent_context` | Retrieve activity in a time range (last 72 hours by default) |
-| `search_context` | Semantic search with project and time filters |
+| `search_context` | Global hybrid search with optional project/time filters and lexical fallback while syncing |
 | `get_context` | Expand source context, including commentary and paginated long text |
 | `open_session` | Create/reopen a Context-owned session UUID |
 | `log_update` | Persist an idempotent, tagged authored note |
 
-`open_session` takes a caller-generated UUID `binding_key`, optional `project`,
+Read-only tools do not require `open_session`. Use a `project` filter only when
+the user explicitly asks to restrict recall to one directory. `open_session` is
+needed only before `log_update`; it takes a caller-generated UUID `binding_key`, optional `project`,
 and optional Context `parent_session_id`. Persist the binding key for a conversation
 and reuse the same metadata on retry/resume. New conversations and forks get new
 keys. Context generates and stores its own random session UUID; imported Codex
@@ -443,7 +457,7 @@ additional user files remain. Default uninstall retains Context data, but status
 and doctor still fail after the skill is removed. Uninstall uses the recorded
 root even when the current `CODEX_HOME` differs.
 
-The skill teaches scoped history retrieval, timezone boundaries, source citations,
+The skill teaches global-by-default history retrieval, timezone boundaries, source citations,
 coverage limitations, and historical text as evidence. SessionStart binding and intelligent tagged updates are described below. Canonical-prompt behavioral
 acceptance remains the final onboarding ticket; discovery tests do not claim it.
 
@@ -459,15 +473,16 @@ contains its absolute interpreter path. Switching environments changes the hook
 definition and can require another Codex review.
 
 This registers three owned commands in `$CODEX_HOME/hooks.json`, installs the
-skill/MCP prerequisites, and checks their actual state. **The first install exits
-1 while Codex trust is pending.** In Codex, open `/hooks`, inspect the three Context
+skill/MCP prerequisites, and checks their actual state. Pending trust is a
+successful installation choice reported as approval on the next Codex launch.
+In Codex, open `/hooks`, inspect the three Context
 commands, and trust them. Start a new conversation afterward. Context never sets
 trust, bypasses it, or marks a pending review green. Hook handler changes require
 reinstallation and review of the changed command definition.
 
 | Event | Action |
 | --- | --- |
-| SessionStart | Persist a binding UUID and instruct the agent to call `open_session` before work; reuse the binding after resume/compaction |
+| SessionStart | Persist a binding UUID, require global recall before memory-dependent answers, and reserve `open_session` for the first write |
 | Stop | Persist a deduplicated catch-up event; never request another model continuation |
 | SessionEnd | Persist a final catch-up event; never hold the conversation open |
 

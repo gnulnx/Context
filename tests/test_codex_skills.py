@@ -75,6 +75,16 @@ def test_codex_skill_red_green_uninstall_red_reinstall(tmp_path):
         Path(os.environ['BLCTX_SKILL_EVIDENCE']).write_text(json.dumps(evidence,indent=2)+'\n')
 
 
+def test_skill_requires_global_recall_before_memory_dependent_answers():
+    text = skills.source()
+    assert 'questions about earlier sessions, remembered facts' in text
+    assert 'single-machine global memory' in text
+    assert 'Recall tools do not require `open_session` first' in text
+    assert 'explicitly depends on prior sessions or saved memory' in text
+    assert 'Never guess an answer that Context could verify' in text
+    assert 'Omit `project` by default' in text
+
+
 @pytest.mark.skipif(shutil.which('codex') is None, reason='Actual Codex CLI required for discovery')
 @pytest.mark.parametrize('custom_root', [False, True])
 def test_fresh_codex_discovers_install_and_removal(tmp_path, monkeypatch, custom_root):

@@ -110,7 +110,7 @@ def recent(days, **options):
 @click.argument('query')
 @filters
 def search(query, **options):
-    """Search local embeddings, with optional project/time filters. Emits JSON."""
+    """Search global local history, with optional project/time filters. Emits JSON."""
     emit(call({'operation': 'search_context', 'query': query, **options}))
 
 

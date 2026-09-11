@@ -16,12 +16,41 @@ def test_service_health_validates_daemon_identity(monkeypatch):
             'installation_id': manifest['installation_id'],
             'schema_version': storage.VERSION,
             'running_jobs': 0,
+            'authored_updates_pending': 0,
+            'index_state': 'ready',
+            'query_mode': 'hybrid',
         },
     )
 
     assert service.health() == (
         'Daemon protocol, private database, and installation identity verified '
-        '(PID 1234).'
+        '(PID 1234). Global recall ready.'
+    )
+
+
+def test_service_health_reports_nonblocking_vector_sync(monkeypatch):
+    storage.install()
+    manifest = storage.read_manifest(storage.locations())
+    monkeypatch.setattr(service, 'verify', lambda: 'service verified')
+    monkeypatch.setattr(service, 'identity', lambda _: {'pid': 1234})
+    monkeypatch.setattr(
+        service.retrieval_cli,
+        'call',
+        lambda request: {
+            'status': 'ok',
+            'installation_id': manifest['installation_id'],
+            'schema_version': storage.VERSION,
+            'running_jobs': 1,
+            'authored_updates_pending': 2,
+            'index_state': 'syncing',
+            'query_mode': 'lexical_fallback',
+        },
+    )
+
+    assert service.health() == (
+        'Daemon protocol, private database, and installation identity verified '
+        '(PID 1234). Global recall available while semantic vectors sync '
+        '(2 updates pending).'
     )
 
 
@@ -36,6 +65,9 @@ def test_service_health_rejects_another_installation(monkeypatch):
             'installation_id': 'another-installation',
             'schema_version': storage.VERSION,
             'running_jobs': 0,
+            'authored_updates_pending': 0,
+            'index_state': 'ready',
+            'query_mode': 'hybrid',
         },
     )
 
