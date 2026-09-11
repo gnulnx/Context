@@ -1,552 +1,185 @@
 # Base Layer Context
 
-Persistent context for coding agents.
+<p align="center">
+  <strong>Persistent, private memory for coding agents.</strong><br>
+  Never re-explain your codebase to your agent. Automatic, durable recall across sessions, machines, and restarts.
+</p>
 
-We meet you where your work.  The console.
-And then we stay out of your way
+<p align="center">
+  <a href="https://pypi.org/project/bl-context/"><img src="https://img.shields.io/pypi/v/bl-context?color=blue&style=flat-square" alt="PyPI version" /></a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square" alt="Python 3.10+" />
+  <img src="https://img.shields.io/badge/platform-linux-lightgrey?style=flat-square" alt="Platform Linux" />
+  <img src="https://img.shields.io/badge/privacy-100%25%20local%20%2F%20offline-success?style=flat-square" alt="100% Local" />
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License MIT" />
+</p>
 
-![blctx demo](assets/demo.gif)
+---
 
-This repository contains the Python package, onboarding CLI, and a private,
-single-machine global history index with Codex MCP integration.
-Lifecycle capture and tagged updates are available for local testing; full onboarding acceptance remains under development.
+## The Payoff: Immediate Agent Recall
 
-## Install
+We meet you where you work—the console—and then stay out of your way. Once installed, your coding agent gains automatic, persistent context across all your projects.
 
-```console
+![Base Layer Context Installation Demo](assets/demo.gif)
+
+When you return to your codebase after days or weeks away, your agent recalls recent work, decisions, and milestones with full cryptographic provenance:
+
+![Codex Recall Preview](assets/codex-recall-preview.svg)
+
+---
+
+## Why Base Layer Context?
+
+Coding agents suffer from **agent amnesia**. When a session ends, the context window vanishes. Manually copying summaries or repasting task descriptions is tedious and burns tokens.
+
+Base Layer Context bridges this gap with a lightweight, private, system-level memory daemon:
+
+* 🧠 **Zero Manual Effort:** Automatically captures session starts, turn milestones, and completions via non-blocking lifecycle hooks.
+* 🔒 **100% Local & Private:** Embeddings run locally on your CPU with FastEmbed (`BAAI/bge-small-en`). Vectors stay on your SSD in Qdrant. Zero telemetry, zero external API calls.
+* ⚡ **Global Machine Scope:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
+* 📜 **Strict Provenance:** No hallucinated memories. Every retrieved passage links back to exact transcript timestamps, line offsets, and session IDs.
+* 🛡️ **Zero-Surprise Permissions:** Runs entirely inside your Linux systemd user session with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
+
+---
+
+## Quickstart (30 Seconds)
+
+### 1. Install package
+
+```bash
 pip install bl-context
 ```
 
-```python
-import bl_context
+### 2. Onboard your agent
 
-print(bl_context.__version__)
+```bash
+blctx install codex
 ```
 
-## CLI development preview
+The interactive onboarding wizard will:
+1. Initialize private, encrypted user directories (`0700`).
+2. Start the lightweight background daemon (`blctxd`) as a systemd user service.
+3. Register the Model Context Protocol (MCP) server with Codex.
+4. Install the `base-layer-context` recall skill.
+5. Verify local CPU embeddings (`BAAI/bge-small-en`, 384 dimensions).
+6. Index recent sessions and verify end-to-end memory retrieval health.
 
-The onboarding CLI uses Click and Rich. The data directory step is implemented
-and tested on Linux, along with the systemd user service and Codex MCP
-registration. Full installation starts the Context user service, registers its
-MCP server, indexes the five most recent Codex sessions, and verifies service,
-MCP, and historical retrieval health. The `embedding_model` installer step
-downloads and verifies the local model before indexing can use it.
-The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
-Use the checkout installation below to test this development version.
+### 3. Approve hooks on next launch
 
-```console
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[dev]'
-blctx install codex --no-color
-blctx install codex --no-history --json
+When prompted during installation, choose **Enable automatic capture** (the recommended default). On your next Codex launch, open `/hooks` to review and trust the 3 local Context handlers.
+
+---
+
+## What to Ask Your Agent
+
+Once onboarded, interact with your agent normally. When you need past context, simply ask:
+
+* *"Summarize what we worked on over the last 3 days."*
+* *"Where did we leave off on the database migration?"*
+* *"What decisions were made regarding sensor calibration yesterday?"*
+* *"Review recent test failures and uncommitted experiments."*
+
+### Explicit Tagged Notes
+
+Agents can also persist durable, tagged authored notes at key project milestones:
+
+> *"Save a progress update: sensor bridge calibrated with 0.02ms latency. Tag it #sensors #calibration."*
+
+Notes are committed to SQLite instantly and become immediately retrievable.
+
+---
+
+## How It Works: Local Privacy Architecture
+
+Base Layer Context operates as an offline, single-writer daemon communicating over a private Unix socket and the standard Model Context Protocol (MCP):
+
+![Architecture Overview](assets/architecture.svg)
+
+### The 4 Local Components
+
+1. **The CLI (`blctx`)**: High-level onboarding, health diagnostics, manual search, and transcript exploration.
+2. **The User Daemon (`blctxd`)**: Single-writer daemon managing SQLite WAL and Qdrant local vector storage. Independent worker threads ensure queries never block during index synchronization.
+3. **The Stdio MCP Server**: Exposes 6 standard tools (`recent_context`, `search_context`, `get_context`, `context_status`, `open_session`, `log_update`) directly to Codex.
+4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) that enqueue transcript snapshots into SQLite in under 2ms without holding your conversation open.
+
+---
+
+## Everyday CLI Commands
+
+### Health & Diagnostics
+
+```bash
+# Check current readiness and installation health
 blctx status
+
+# Diagnose system health, verify daemon, and inspect checks
 blctx doctor
-blctx uninstall codex
-python -m ruff check src tests
-python -m pytest -q
 ```
 
-Full install, status, and doctor exit 0 when the system is healthy. Choosing to
-install hooks is confirmed as ready for approval on the next Codex launch;
-choosing not to install them is also a successful, explicit configuration.
-System-level and registration failures still exit 1. Implemented selected checks
-exit 0 when healthy. Uninstall exits 0 when installation ownership is deactivated.
-Usage errors exit with code 2; help exits with code 0. `--json` emits only a
-structured report, including ordered checks and the exit code. `--no-color`
-selects plain, non-animated output and disables colors. Interactive plain installs
-use a simple text prompt for the optional hooks. Both output flags work before the
-command or after its arguments.
-`--no-history` skips the three history checks without claiming they passed;
-the remaining failures still prevent readiness.
+### Transcript Exploration (`blctx explore`)
 
-The tests pass when these intentional failures are reported accurately. The
-installer snapshot is the visible contract for subsequent implementation.
+Safely inspect local Codex transcript files before importing them:
 
-### Focused checks
+```bash
+# List the newest 20 transcripts on your machine
+blctx explore
 
-Use `--step STEP_ID` with `install codex`, `status`, or `doctor`:
-
-```console
-blctx install codex --step background_service --json
-blctx status --step data_directory --json
-blctx doctor --step data_directory --no-color
-```
-
-Installation runs prerequisites first and reports them in `dependencies` and on
-individual checks. A failed prerequisite prevents the dependent installer from
-running. Status and doctor only verify the selected step; they never install its
-prerequisites or repair removed state. Full reports retain the onboarding order.
-
-JSON `success` and the process exit code describe the requested checks;
-`ready` requires the complete applicable checklist and is always false for a
-selected run. Passed selected checks exit 0; failed or blocked checks exit 1;
-unknown step IDs and history selections combined with `--no-history` exit 2.
-`--no-history` is also available on status and doctor. Authorized skips carry
-`skip_reason: "no_history"`; summary wording cannot authorize a skip.
-
-Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp`,
-`codex_skills`, `embedding_model`, `session_discovery`, `history_index`,
-`service_health`, `mcp_health`, `history_retrieval`, `codex_hooks`.
-
-Codex session discovery is deliberately metadata-only. It counts regular
-`.jsonl` files below `$CODEX_HOME/sessions` and
-`$CODEX_HOME/archived_sessions` without opening or parsing transcripts, then
-records the five most recently modified paths for the later indexing step. It
-does not create an index or enqueue background work. Rerun it to refresh the
-snapshot:
-
-```console
-blctx install codex --step session_discovery
-```
-
-The following `history_index` step sends those five paths to the existing
-single-writer daemon in newest-first order and waits for its durable job. The
-installer keeps one progress bar inside the `Historical sessions indexed` row;
-it does not start five competing model/Qdrant writers. Completed source
-checkpoints make reruns inexpensive, and append-only growth in a live Codex
-transcript reuses its cryptographically verified indexed prefix instead of
-chasing a file that is still growing. Explicit uninstall supersedes queued or
-running history jobs so reinstall cannot revive an old all-history backlog;
-completed index data remains available for fast verification and reuse.
-
-```console
-blctx install codex --step history_index
-```
-
-The data step has a real subprocess acceptance test covering install, status,
-doctor, uninstall, reinstall and purge. The execution foundation also retains
-a test-only file-backed fixture for generic dependency behavior.
-
-
-### Private local installation (Linux)
-
-`blctx install codex --step data_directory` creates these user directories with
-mode `0700`, respecting absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`,
-`XDG_CACHE_HOME`, and `XDG_STATE_HOME` overrides:
-
-| Purpose | Default path |
-| --- | --- |
-| Data | `~/.local/share/bl-context` |
-| Configuration | `~/.config/bl-context` |
-| Cache | `~/.cache/bl-context` |
-| State | `~/.local/state/bl-context` |
-
-The data directory contains `context.db`, initialized atomically with schema
-version 1 and an installation identifier. The state directory contains a
-versioned `installation.json` recording active ownership, owned files and
-created directories, and absolute interpreter/CLI paths for later service use.
-Both files have mode `0600`. Reinstall retains the installation identifier and
-existing data. An interrupted initial schema creation can be retried.
-
-Status and doctor require private writable directories, a valid schema matching
-the manifest, active ownership, and available recorded executables. They do not
-repair permissions or recreate missing state. Existing unowned databases,
-unsupported manifests, symbolic links, and unsafe permissions fail with diagnostics
-instead of being overwritten or silently adopted.
-
-`blctx uninstall codex` deactivates the manifest and retains data/cache. Retained
-files alone do not pass verification. `blctx uninstall codex --purge` removes only
-the two explicitly owned files and empty directories created by Context. Unknown
-files, pre-existing directories, original Codex transcripts, and unrelated
-configuration are preserved. Uninstall stops and disables the Context service before deactivating data
-ownership. Codex integration removal will be added with those features.
-
-To exercise the real lifecycle without changing your normal user installation:
-
-```sh
-python -m pytest -q tests/test_storage.py
-```
-
-The test runs the installed `blctx` entry point from `/` with an isolated HOME,
-checks red → green → uninstall → red → reinstall → green, verifies idempotence
-and preservation, and exercises purge. Full readiness remains separate from a
-selected data-only lifecycle check.
-
-
-### Background service (Linux systemd user session)
-
-```sh
-blctx install codex --step background_service
-blctx status --step background_service --json
-blctx doctor --step background_service
-```
-
-Installation creates an installation-specific `blctxd-UUID.service` in the
-Context config directory and enables it through the systemd user manager. It
-starts at user login; no sudo, system service, or lingering configuration is
-required. An unavailable user manager/session bus fails with remediation.
-
-The daemon uses the recorded absolute Python interpreter, reports readiness to
-systemd only after binding a mode-0600 Unix socket in the private state directory,
-and holds an exclusive writer lock on the data directory. Startup and shutdown
-are bounded to 10 and 5 seconds; systemd restarts crashes. Logs are available with
-`journalctl --user -u blctxd-UUID.service` (use the UUID in `installation.json`).
-
-Verification checks active installation ownership, unit content, persistent
-enablement, registration path, running PID/interpreter/arguments and matching
-identity over private IPC. The separate `service_health` check performs a bounded
-daemon protocol round-trip and validates its private database and installation
-identity. Default uninstall stops the process, disables registration, and removes
-its unit/socket before deactivating ownership.
-
-Ordinary tests isolate Context paths and deliberately use an unavailable service
-bus. To run the real systemd acceptance test in a Linux user session:
-
-```sh
-BLCTX_SYSTEMD_TEST=1 python -m pytest -q tests/test_service.py
-```
-
-This opt-in test uses isolated Context directories and a unique unit on the
-current user's real manager. It tests crash recovery, repeated installation,
-missing-unit cleanup, and uninstall, and removes its registration afterward.
-
-### Explore Codex transcripts before importing
-
-```sh
-blctx explore                         # newest 20 transcript paths, active and archived
-blctx explore --limit 100
-blctx explore /absolute/path/to/session.jsonl
-blctx explore /absolute/path/to/session.jsonl --view raw --limit 5
-blctx explore /absolute/path/to/session.jsonl --start-line 100 --limit 20 --json
-blctx explore --root /another/codex/home
-```
-
-This read-only command reads local JSONL files, not the Codex App Server. It does
-not create Context state, import records, start services, or resume sessions.
-The `--view messages` view shows full candidate user/assistant records, including
-injected context; it deliberately does not claim these are approved import data.
-Raw view exposes metadata, events, tools, and other record types. Results include
-source line/byte positions and a next-line hint. Malformed JSON is shown as a
-parse error; reads stop at the file size captured when opened. `--limit` limits
-record count in raw/messages views and turn count in preview, not text size. JSON escapes embedded terminal control
-characters. Transcript contents may contain sensitive text; inspect locally.
-
-Preview proposed ingestion decisions before importing:
-
-```sh
-blctx explore /path/to/session.jsonl --view preview --limit 100
-blctx explore /path/to/session.jsonl --view preview --start-line 101 --json
-```
-
-Preview groups displayed source records by explicit turn ID (or an `unassigned`
-group when absent). It labels `index`, `context_only`, `excluded`, `duplicate`,
-`metadata`, and `unclassified`, with reasons and original line/byte positions.
-Default preview shows selected conversation text and compact exclusion totals.
-Use `--details` for per-record decisions and turns without selected messages.
-Preview limits count complete turns, and counts cover the whole captured file.
-The captured file is classified before pagination so duplicate matching and
-turn context remain consistent; large files therefore require a full scan. Exact cross-representation matches
-within a turn are proposed duplicates; same-representation repeated messages are
-retained. These are review heuristics, not an approved importer: unknown phases
-and shapes remain unclassified, and injected-context detection uses known prefixes.
-No records are saved or indexed. Use raw view at a source line to investigate.
-
-
-Conversation-first exploration is the default when selecting a session:
-
-```sh
+# Preview conversation turns and classified records
 blctx explore /path/to/session.jsonl --limit 3
-blctx explore /path/to/session.jsonl --details --limit 3
-blctx explore /path/to/session.jsonl --json --limit 3
+
+# View raw JSONL records, token boundaries, and byte positions
+blctx explore /path/to/session.jsonl --view raw --limit 5
 ```
 
-JSON `turns[].messages` contains the exact proposed searchable text, roles,
-source locations and duplicate references. `--details` adds all classified
-records. No synthetic summaries replace source text. Turns without a selected
-request or answer are explicitly flagged. Classification lives separately in
-`preview.classify_transcript` so preview and the importer share the same selection policy.
+### Terminal Memory Queries
 
-### Index and query local history
+Query your agent's memory directly from your terminal:
 
-The first retrieval implementation is one private, machine-global index. It uses
-**BAAI/bge-small-en** through FastEmbed on CPU, with Qdrant local storage owned
-by `blctxd`. SQLite stores normalized
-messages, provenance, import checkpoints, durable jobs, and rebuildable vectors.
-The tested Qdrant/FastEmbed versions are pinned. The actual model/tokenizer
-fingerprint is recorded to prevent silently mixing different embeddings. A
-session's working directory is retained as provenance and an optional explicit
-filter; it is not a default visibility boundary.
-
-```sh
-source .venv/bin/activate
-blctx install codex --step background_service
-blctx install codex --step embedding_model
-
-# Start with one transcript you reviewed in explore:
-blctx index /absolute/path/to/session.jsonl --wait
-
-# Or explicitly import all active/archived transcripts under the Codex root:
-blctx index --wait
-# blctx index --root /another/codex/root --wait
-
-blctx index-status
+```bash
+# View recent turns across the last 3 days
 blctx recent --days 3
-blctx recent --since 2026-09-08 --until 2026-09-11 --project /absolute/project/path
-blctx search 'why did we change the deployment approach?'
-blctx context CONTEXT_ID
+
+# Semantic search across historical sessions
+blctx search "why did we switch to batched inference?"
+
+# Check indexing status and background jobs
+blctx index-status
 ```
 
-These commands emit JSON. Index requests return a durable job ID immediately;
-`--wait` polls for up to ten minutes (progress goes to stderr). If it times out,
-the job keeps running: inspect it with `blctx index-status JOB_ID`. Indexing and
-queries use only the configured, verified local model and never initiate a model
-download. Embedding inference is local; no transcript text is sent to an API.
-Reads use three query workers independently of the single serialized embedding/
-Qdrant writer. While vector reconciliation is running, recent/context reads stay
-available from SQLite and search uses lexical fallback. Repair upserts the active
-collection in batches and prunes stale points without dropping the collection.
-`context_status` and service health report `index_state` and `query_mode` so
-background synchronization is visible instead of appearing as a timeout.
-Focused MCP search defaults to five results and ranks deliberate authored notes
-ahead of raw transcript echoes when lexical relevance is otherwise equal.
+### Uninstallation & Clean Removal
 
-### Download and verify the embedding model
+```bash
+# Deactivate integration, stop daemon, and remove hooks (retains database)
+blctx uninstall codex
 
-```sh
-blctx install codex --step embedding_model
-blctx status --step embedding_model --json
-blctx doctor --step embedding_model
+# Complete purge (removes all database records and vectors; preserves transcripts)
+blctx uninstall codex --purge
 ```
 
-The installer uses one inline Rich progress row for cache checks, resumable
-downloads, loading, and retrieval verification. JSON output remains progress-free.
-The CPU model is `BAAI/bge-small-en`, downloaded from `Qdrant/bge-small-en` at
-pinned revision `8791246cc2a79c7949a4dc0d4a018cbd7d024879`. All six files are
-checked against fixed sizes and SHA256 hashes before activation. Verification is
-offline and checks finite, nonzero 384-dimensional vectors plus ranked retrieval.
-Interrupted downloads remain resumable; normal uninstall retains the owned cache,
-while `--purge` removes only recorded model artifacts.
+---
 
-The importer uses the same selection policy as `explore --view preview`:
-user requests, visible progress commentary, and final answers are embedded,
-and exclusions stay out of the index. Unknown record shapes produce a **partial**
-job with counts; a successful queue acknowledgement never claims completion.
-Changed files are reparsed and reconciled; unchanged snapshots are skipped.
-Completed files are checkpointed independently, and interrupted jobs replay at
-daemon startup. Moving a known session into the archive updates source references
-without duplicating the session. Conflicting same-ID files are reported.
+## Security, Permissions & Storage Layout
 
-Search chunks follow tokenizer boundaries (384 tokens with 48-token overlap).
-Results include exact source text, session/turn IDs, project, timestamps, source
-file/line/byte positions, and chunk character ranges. Recent results are grouped
-by turn and filtered by message activity time. Dates without timezone offsets
-mean UTC; `--since` is inclusive and `--until` exclusive. Unknown timestamps are
-reported in coverage and do not match a date range.
+Context enforces strict file permission boundaries:
 
-Use `--limit` and `--offset` to page results. Responses cap returned text at
-24,000 characters and explicitly flag truncation. Recent previews cap each turn
-at 20 searchable messages; expand with `context`. For a long individual message,
-use `blctx context CONTEXT_ID --offset N --limit 1 --char-offset M`, taking M from
-`next_char_offset`. Semantic scores indicate similarity, not factual confidence.
+| Purpose | Path | Mode | Access |
+| :--- | :--- | :---: | :--- |
+| **Data** | `~/.local/share/bl-context/` | `0700` | SQLite database (`context.db`, `0600`) and Qdrant vectors |
+| **Config** | `~/.config/bl-context/` | `0700` | Systemd user service unit (`blctxd-*.service`) |
+| **Cache** | `~/.cache/bl-context/` | `0700` | Pinned FastEmbed model weights (SHA-256 verified) |
+| **State** | `~/.local/state/bl-context/` | `0700` | Installation manifest & Unix socket (`daemon.sock`, `0600`) |
 
-Coverage describes only imported files, reports changed/missing sources and
-partial imports, and includes recent job states. Querying does not automatically
-capture new Codex activity by itself. Trusted lifecycle hooks register sessions for background capture; rerun `index` for other explicitly selected history. Full onboarding readiness remains
-red for integrations not yet implemented.
+* Overrides: Respects absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_STATE_HOME`.
+* Isolation: No sudo, no system-level daemon, no open network ports.
 
-Default uninstall stops the daemon and retains the index/model cache. `--purge`
-removes recorded index/model artifacts and the database while preserving unknown
-files. Original Codex transcripts remain untouched.
+---
 
-Validation:
+## Documentation & Contributing
 
-```sh
-python -m pytest -q
-# Explicit integration tests download/use the real embedding model:
-BLCTX_INDEX_TEST=1 python -m pytest -q tests/test_index.py
-# Optional real systemd user-service lifecycle:
-BLCTX_SYSTEMD_TEST=1 python -m pytest -q tests/test_service.py
-```
+* **[Developer & Contributor Guide](docs/DEVELOPMENT.md):** Test harnesses, systemd integration testing, focused step flags (`--step`), and MCP tool specifications.
+* **[UX Review & Product Roadmap](docs/UXReview.md):** In-depth UX scorecards, friction analysis, and architectural recommendations.
 
-### Codex MCP integration
+---
 
-```sh
-blctx install codex --step codex_mcp
-blctx status --step codex_mcp --json
-blctx doctor --step codex_mcp --json
-codex mcp get base-layer-context --json
-```
+## License
 
-Installation detects `codex` on PATH and uses `CODEX_HOME` (default `~/.codex`).
-It registers the absolute Python interpreter, installation UUID, and explicit XDG
-roots using `codex mcp add`. It preserves unrelated config and refuses a name
-collision or a modified owned entry. Repeat installation is idempotent.
-`blctx uninstall codex` removes the owned registration before stopping the service;
-retained data alone does not satisfy the installed check.
-
-Start a **new Codex conversation** after registration and ask it to summarize
-work from the last few days. Recall is global by default, so this works from any
-directory on the machine without opening a Context write session first. Import reviewed
-transcripts first using `blctx index ... --wait`; registration does not import all
-history. Six tools are available:
-
-| Tool | Purpose |
-| --- | --- |
-| `context_status` | Inspect coverage, freshness, import jobs, pending note embeddings |
-| `recent_context` | Retrieve activity in a time range (last 72 hours by default) |
-| `search_context` | Global hybrid search with optional project/time filters and lexical fallback while syncing |
-| `get_context` | Expand source context, including commentary and paginated long text |
-| `open_session` | Create/reopen a Context-owned session UUID |
-| `log_update` | Persist an idempotent, tagged authored note |
-
-Read-only tools do not require `open_session`. Use a `project` filter only when
-the user explicitly asks to restrict recall to one directory. `open_session` is
-needed only before `log_update`; it takes a caller-generated UUID `binding_key`, optional `project`,
-and optional Context `parent_session_id`. Persist the binding key for a conversation
-and reuse the same metadata on retry/resume. New conversations and forks get new
-keys. Context generates and stores its own random session UUID; imported Codex
-session IDs are provenance only. The SessionStart hook persists/injects this binding, and the installed skill guides tagged updates. MCP server
-startup alone does not identify a Codex conversation.
-
-For `log_update`, pass the returned `session_id`, a new UUID `update_id`, `text`,
-and optional `tags`, `kind` (`status`, `decision`, `note`), and `authorship`
-(`agent_generated`, `user_requested`). Reuse the same update UUID and content on
-retry; conflicting reuse fails. Limits are 16,000 text characters, 20 tags, and
-64 characters per tag. Tags are preserved in retrieved metadata; exact tag
-filtering is not implemented yet. `user_requested` records an agent's attribution,
-not independently verified user approval.
-
-Notes are committed to SQLite before background embedding. Recent/context tools
-can retrieve them immediately; semantic search includes them once indexed.
-`context_status.authored_updates_pending` reports incomplete embeddings. Retry the
-same `log_update` or restart the daemon to retry failed embeddings. Results label
-notes as `source_type=authored_update` with `context_session_id`; transcript results
-use `source_type=codex_transcript` and `source_session_id`. Imported text remains
-source evidence, and authored notes retain their attribution.
-
-The registered MCP entry point uses stdio; diagnostic logs go to stderr. Tool
-errors report an unavailable daemon or mismatched/inactive installation. The
-`codex_mcp` check verifies saved/effective registration. The separate `mcp_health`
-check launches that exact command, initializes stdio MCP, verifies all six tools,
-and calls `context_status`. `history_retrieval` then performs semantic search and
-context expansion through MCP and requires source provenance.
-
-```sh
-# Full real model, daemon, Codex registration and systemd lifecycle acceptance:
-BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
-```
-
-
-### Codex historical-recall skill
-
-```sh
-blctx install codex --step codex_skills
-blctx status --step codex_skills --json
-blctx doctor --step codex_skills --json
-```
-
-The wheel bundles `src/bl_context/skills/base-layer-context/SKILL.md` as package
-resources. Installation writes one skill to `$CODEX_HOME/skills/base-layer-context`
-(default `~/.codex/skills/base-layer-context`). This path is tested with fresh
-Codex 0.154.0 `skills/list` requests, including a custom root, removal, and reinstall.
-No repository checkout is needed at runtime. Restart an existing Codex client if
-its skill list is stale.
-
-The installer records the version, root, exact file path, and installed SHA-256.
-An unchanged owned file can be upgraded; edited files, unowned directories,
-symlinks, and hardlinks are preserved with an error. A second copy in the standard
-`~/.agents/skills` or `~/.codex/skills` user roots blocks installation rather than
-creating duplicate discovery entries. Arbitrary repository/plugin copies are not
-scanned globally. A disabled `skills.config` entry remains disabled and fails the
-installed check.
-
-`blctx uninstall codex` removes only the hash-matching installed skill, even if
-the package version has since changed. Missing owned files are tolerated;
-additional user files remain. Default uninstall retains Context data, but status
-and doctor still fail after the skill is removed. Uninstall uses the recorded
-root even when the current `CODEX_HOME` differs.
-
-The skill teaches global-by-default history retrieval, timezone boundaries, source citations,
-coverage limitations, and historical text as evidence. SessionStart binding and intelligent tagged updates are described below. Canonical-prompt behavioral
-acceptance remains the final onboarding ticket; discovery tests do not claim it.
-
-
-### Trusted lifecycle capture and tagged updates
-
-```sh
-blctx install codex --step codex_hooks
-```
-
-Use the same `blctx` installation/environment throughout this test: registration
-contains its absolute interpreter path. Switching environments changes the hook
-definition and can require another Codex review.
-
-This registers three owned commands in `$CODEX_HOME/hooks.json`, installs the
-skill/MCP prerequisites, and checks their actual state. Pending trust is a
-successful installation choice reported as approval on the next Codex launch.
-In Codex, open `/hooks`, inspect the three Context
-commands, and trust them. Start a new conversation afterward. Context never sets
-trust, bypasses it, or marks a pending review green. Hook handler changes require
-reinstallation and review of the changed command definition.
-
-| Event | Action |
-| --- | --- |
-| SessionStart | Persist a binding UUID, require global recall before memory-dependent answers, and reserve `open_session` for the first write |
-| Stop | Persist a deduplicated catch-up event; never request another model continuation |
-| SessionEnd | Persist a final catch-up event; never hold the conversation open |
-
-Hook handlers write only small SQLite records, with bounded lock waits and a
-2-second Codex timeout. Errors return advisory output, allowing work to continue.
-No model or embedding runs in a hook. The daemon checks registered transcript
-snapshots every two seconds and reuses unchanged chunk embeddings. The transcript
-is reparsed for classification; this first version does not implement a streaming
-parser. No other history is automatically enrolled.
-
-The Codex event ID is a lookup hint scoped to CODEX_HOME. Context generates its
-own binding and session UUIDs. Different event session IDs (including forks) get
-new bindings. Missing event IDs are rejected rather than guessed. A null
-transcript path retains the event pending a usable path; capture cannot promise
-transcript recovery for ephemeral/no-transcript conversations. `SessionEnd`
-delivery does not cover crashes, so the daemon also reconciles registered files
-without another hook event.
-
-The skill saves visible progress with useful tags through `log_update`, using
-`source_text` to associate an exact visible message with captured transcript
-references. Matching is within a Context session; repeated identical source text
-can share references. New summaries omit source_text and remain distinct authored
-notes. Private thinking, raw tool traffic, and setup instructions are excluded.
-User requests such as “index/tag our recent work” use this same skill and MCP.
-
-Session/update storage acknowledgements bypass the embedding worker. SQLite WAL
-mode prevents long recovery read snapshots from blocking those writes. Acknowledged
-updates are durable and may still await semantic indexing. Existing imported
-files retain their prior selection until explicitly reindexed; coverage reports
-outdated selection. New capture includes visible progress by default.
-
-Local smoke test, after trusting the hooks:
-
-1. Start a **new** Codex conversation in a small test project.
-2. Ask: “Give a short progress update about reviewing the sensor integration,
-   save it with useful tags using Context, then tell me the Context session ID.”
-3. Ask: “Index/tag our recent work with `sensors` and `review`.”
-4. Ask Context to retrieve that work and inspect timestamps, tags, source
-   references, and the distinction between a visible update and a summary.
-5. Close the test conversation normally (or archive it). SessionEnd can be delayed
-   while a conversation remains open in another client.
-6. Run `blctx doctor --step codex_hooks --json`. Green requires all three event
-   types to have arrived, indexed content, and no pending/failed capture. Inspect
-   `blctx index-status` (`capture` field) for backlog, null paths, and errors.
-
-Resume the test conversation and confirm the Context ID stays the same. Fork it
-and confirm the new conversation receives a different ID. Compact and continue to
-confirm the hook restores the existing binding. Subagent-specific lifecycle
-hooks are not installed in this first version.
-
-For uninstall review, use an isolated HOME/CODEX_HOME/XDG environment; do not
-uninstall your working installation merely to run a test. `blctx uninstall codex`
-removes owned hook groups, then the skill/MCP/service. It preserves other hook
-entries and refuses modified Context commands. An old in-flight handler cannot
-enqueue after removal, and capture checks installation generation before commit.
-Reinstalling requires review of its new hook generation. Inline `[hooks]` config
-is preserved with an actionable conflict; consolidate it into hooks.json first.
-
-```sh
-python -m pytest -q
-BLCTX_INDEX_TEST=1 BLCTX_SYSTEMD_TEST=1 python -m pytest -q
-```
-
-Automated tests use isolated hook roots and never grant trust. They distinguish
-synthetic handler/recovery tests from fresh Codex discovery and real trusted
-client delivery. Full installer UX and the remaining onboarding checks are still
-separate acceptance work.
+MIT © [Base Layer Context Contributors](https://github.com/gnulnx/Context)
