@@ -48,7 +48,7 @@ def test_only_codex_install_calls_codex_install(monkeypatch):
 
 def test_live_form_contains_all_steps_and_inline_embedding_progress():
     output = StringIO()
-    console = Console(file=output, width=160, force_terminal=False)
+    console = Console(file=output, width=160, height=40, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.active_step = "embedding_model"
     form.progress_started["embedding_model"] = time.monotonic() - 1
@@ -59,13 +59,13 @@ def test_live_form_contains_all_steps_and_inline_embedding_progress():
 
     assert all(step.label in rendered for step in checks.STEPS)
     model_row = next(line for line in rendered.splitlines() if "Embedding model" in line)
-    assert "Downloading embedding model" in model_row
+    assert "Downloading embedding" in model_row
     assert "50.0/100.0 MB" in model_row
 
 
 def test_live_form_keeps_history_progress_in_its_step_row():
     output = StringIO()
-    console = Console(file=output, width=160, force_terminal=False)
+    console = Console(file=output, width=160, height=40, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.active_step = "history_index"
     form.history_index_progress = ("Indexing recent sessions", 3, 5)
@@ -83,7 +83,7 @@ def test_live_form_keeps_history_progress_in_its_step_row():
 
 def test_live_form_shows_history_index_failure_details():
     output = StringIO()
-    console = Console(file=output, width=160, force_terminal=False)
+    console = Console(file=output, width=160, height=40, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.results["history_index"] = checks.CheckResult(
         "history_index",
@@ -103,7 +103,7 @@ def test_live_form_shows_history_index_failure_details():
 
 def test_hooks_consent_screen_explains_security_and_skipping():
     output = StringIO()
-    console = Console(file=output, width=100, force_terminal=False)
+    console = Console(file=output, width=100, height=40, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
 
     console.print(form.render_hooks_consent())
@@ -121,7 +121,7 @@ def test_hooks_consent_screen_explains_security_and_skipping():
 
 def test_hooks_consent_screen_explains_selected_skip_consequence():
     output = StringIO()
-    console = Console(file=output, width=100, force_terminal=False)
+    console = Console(file=output, width=100, height=40, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
 
     console.print(form.render_hooks_consent(selected=1))
@@ -130,7 +130,67 @@ def test_hooks_consent_screen_explains_selected_skip_consequence():
     normalized = " ".join(rendered.split())
     assert "Selected: Skip for now" in rendered
     assert "No hooks or automatic capture" in rendered
-    assert "manual saves still work" in normalized
+    assert "manual" in normalized
+    assert "saves still work" in normalized
+
+
+def test_hooks_screen_has_a_complete_standard_terminal_layout():
+    output = StringIO()
+    console = Console(file=output, width=80, height=24, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert "Terminal resized" not in rendered
+    assert "Security" in rendered
+    assert "Enable automatic capture" in rendered
+    assert "[Enter] Confirm" in rendered
+
+
+def test_undersized_terminal_gets_resize_notice_instead_of_clipping():
+    output = StringIO()
+    console = Console(file=output, width=60, height=15, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert "Terminal resized" in rendered
+    assert "60 columns × 15 rows" in rendered
+    assert "restore automatically" in " ".join(rendered.split())
+
+
+def test_installer_window_is_bounded_and_centered_on_wide_terminals():
+    output = StringIO()
+    console = Console(file=output, width=140, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render())
+
+    border = next(line for line in output.getvalue().splitlines() if "╭" in line)
+    assert border.index("╭") > 0
+    assert len(border.rstrip()) <= 126
+
+
+def test_complete_installer_uses_compact_layout_at_80_by_24():
+    output = StringIO()
+    console = Console(file=output, width=80, height=24, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    for step in checks.STEPS:
+        form.results[step.step_id] = checks.CheckResult(
+            step.step_id,
+            step.label,
+            checks.CheckStatus.PASSED,
+            "A deliberately long verification result that cannot fit inline.",
+        )
+
+    console.print(form.render())
+
+    rendered = output.getvalue()
+    assert "Terminal resized" not in rendered
+    assert all(step.label in rendered for step in checks.STEPS)
+    assert len(rendered.splitlines()) <= 24
 
 
 @pytest.mark.parametrize(
