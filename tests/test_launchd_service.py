@@ -52,7 +52,7 @@ def test_plist_uses_literal_paths_private_logs_and_login_startup(tmp_path):
     storage.private(unit)
 
 
-def test_verify_checks_loaded_identity_and_disabled_state(monkeypatch):
+def test_verify_checks_loaded_identity_and_disabled_state(tmp_path, monkeypatch):
     paths, manifest, unit = installed_definition()
     calls = []
 
@@ -66,6 +66,20 @@ def test_verify_checks_loaded_identity_and_disabled_state(monkeypatch):
     monkeypatch.setattr(launchd, 'identity', lambda _: response)
     assert 'PID 123' in launchd.verify()
     assert all(call[0].startswith('print') for call in calls)
+    real_interpreter = tmp_path / 'real-python'
+    real_interpreter.touch()
+    real_interpreter.chmod(0o700)
+    interpreter_alias = tmp_path / 'Python with spaces'
+    interpreter_alias.symlink_to(real_interpreter)
+    manifest['interpreter'] = str(interpreter_alias)
+    storage.atomic_manifest(paths, manifest)
+    launchd.write_definition(unit, launchd.definition(paths, manifest))
+    response['interpreter'] = str(real_interpreter)
+    assert 'PID 123' in launchd.verify()
+    response['interpreter'] = str(tmp_path / 'different-python')
+    with pytest.raises(RuntimeError, match='identity does not match'):
+        launchd.verify()
+    response['interpreter'] = str(real_interpreter)
     response['pid'] = 124
     with pytest.raises(RuntimeError, match='identity does not match'):
         launchd.verify()

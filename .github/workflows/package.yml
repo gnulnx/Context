@@ -46,6 +46,12 @@ jobs:
           python -m pip install dist/*.whl pytest
           python -m pytest -q
 
+      - name: Test real LaunchAgent lifecycle
+        if: runner.os == 'macOS'
+        env:
+          BLCTX_LAUNCHD_TEST: "1"
+        run: python -m pytest -q tests/test_launchd_service.py::test_real_launchd_lifecycle
+
       - name: Inspect distribution contents
         run: |
           python -m zipfile --list dist/*.whl
