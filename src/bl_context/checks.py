@@ -239,23 +239,20 @@ class CodexHooksStep(Step):
         if codex_hooks.skipped():
             return CheckResult(
                 self.step_id,
-                "Codex hooks skipped",
-                CheckStatus.SKIPPED,
-                "Automatic capture remains disabled.",
+                self.label,
+                CheckStatus.PASSED,
+                "Hooks not installed.",
                 skip_reason="optional",
             )
         try:
-            return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_hooks.verify())
+            codex_hooks.verify_registration()
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.PASSED,
+                "Approve hooks on next Codex launch.",
+            )
         except Exception as exc:
-            if codex_hooks.registered():
-                return CheckResult(
-                    self.step_id,
-                    self.label,
-                    CheckStatus.WARNING,
-                    "Installed; approve the hooks at the next Codex launch.",
-                    diagnostic=str(exc),
-                    remediation="Review and trust the three Context entries in Codex.",
-                )
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Codex hooks unavailable',
                                diagnostic=str(exc), remediation='Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.')
 
@@ -348,7 +345,7 @@ STEPS = (
     ),
     CodexHooksStep(
         "codex_hooks",
-        "Codex hooks installed",
+        "Codex Hooks",
         prerequisites=("codex_mcp", "codex_skills"),
         optional=True,
     ),

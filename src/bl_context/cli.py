@@ -173,7 +173,11 @@ def report(
                 else " Selected check failed. Not ready."
             )
         else:
-            console.print(" Ready." if ready else " Not ready.")
+            console.print(
+                " Ready. Launch Codex and ask it to summarize your recent sessions."
+                if ready
+                else " Not ready."
+            )
     ctx.exit(0 if success else 1)
 
 

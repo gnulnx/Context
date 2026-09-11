@@ -318,34 +318,48 @@ def test_codex_install_uses_hook_choice(monkeypatch):
     assert seen == ["asked"]
 
 
-def test_skipped_hooks_use_an_unambiguous_result_label(monkeypatch):
+def test_skipped_hooks_are_a_green_confirmation(monkeypatch):
     monkeypatch.setattr("bl_context.checks.codex_hooks.skipped", lambda: True)
     step = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
 
     result = step.verify()
 
-    assert result.status == checks.CheckStatus.SKIPPED
-    assert result.label == "Codex hooks skipped"
-    assert result.summary == "Automatic capture remains disabled."
+    assert result.status == checks.CheckStatus.PASSED
+    assert result.label == "Codex Hooks"
+    assert result.summary == "Hooks not installed."
 
 
-def test_live_form_renders_skipped_hooks_result_label():
+def test_enabled_hooks_are_a_green_confirmation(monkeypatch):
+    monkeypatch.setattr("bl_context.checks.codex_hooks.skipped", lambda: False)
+    monkeypatch.setattr(
+        "bl_context.checks.codex_hooks.verify_registration", lambda: None
+    )
+    step = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
+
+    result = step.verify()
+
+    assert result.status == checks.CheckStatus.PASSED
+    assert result.label == "Codex Hooks"
+    assert result.summary == "Approve hooks on next Codex launch."
+
+
+def test_live_form_renders_skipped_hooks_as_green():
     output = StringIO()
     console = Console(file=output, width=160, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.results["codex_hooks"] = checks.CheckResult(
         "codex_hooks",
-        "Codex hooks skipped",
-        checks.CheckStatus.SKIPPED,
-        "Automatic capture remains disabled.",
+        "Codex Hooks",
+        checks.CheckStatus.PASSED,
+        "Hooks not installed.",
         skip_reason="optional",
     )
 
     console.print(form.render())
 
     rendered = output.getvalue()
-    assert "–  Codex hooks skipped" in rendered
-    assert "Automatic capture remains disabled." in rendered
+    assert "✓  Codex Hooks" in rendered
+    assert "Hooks not installed." in rendered
 
 
 def test_finalizing_waits_and_records_completion(monkeypatch):
