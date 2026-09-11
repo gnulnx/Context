@@ -46,7 +46,7 @@ def handler_version():
 
 
 def entries(paths, manifest, generation):
-    env = [f'XDG_{key.upper()}_HOME={value.parent}' for key,value in paths.items()]
+    env = [f'{key}={value}' for key,value in storage.environment(paths).items()]
     command = shlex.join(['/usr/bin/env',*env,manifest['interpreter'],'-m','bl_context.hook_handler',
                           '--installation-id',manifest['installation_id'],'--generation',generation,'--handler-version',handler_version()])
     return {event:{'hooks':[{'type':'command','command':command,'timeout':2}]} for event in capture.EVENTS}

@@ -16,7 +16,7 @@ from .embedding import MODEL
 def call(request):
     try:
         storage.verify()
-        endpoint = storage.locations()['state'] / 'daemon.sock'
+        endpoint = storage.socket_path(storage.locations())
         info = endpoint.lstat()
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600:
             raise RuntimeError('Not a private Context socket')

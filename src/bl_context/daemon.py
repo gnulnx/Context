@@ -1,4 +1,4 @@
-"""Single-writer daemon with private Unix IPC and systemd readiness notification."""
+"""Single-writer daemon with private Unix IPC and optional readiness notification."""
 import argparse
 import fcntl
 import json
@@ -8,6 +8,7 @@ import signal
 import socket
 import sqlite3
 import stat
+import sys
 import threading
 import time
 from contextlib import closing
@@ -33,7 +34,7 @@ def main():
     # Directory flock avoids stale lock files and is shared by all daemon starts.
     writer = os.open(paths['data'], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     fcntl.flock(writer, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    endpoint = paths['state'] / 'daemon.sock'
+    endpoint = storage.socket_path(paths)
     if endpoint.exists() or endpoint.is_symlink():
         info = endpoint.lstat()
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
@@ -64,7 +65,8 @@ def main():
                     if len(buffer) > 1048576:
                         raise ValueError('Request exceeds 1 MiB')
                 if buffer == b'identity\n':
-                    response = {'installation_id': args.installation_id, 'pid': os.getpid(), 'protocol_version': 1, 'runtime_fingerprint': fingerprint}
+                    response = {'installation_id': args.installation_id, 'pid': os.getpid(), 'protocol_version': 1, 'runtime_fingerprint': fingerprint,
+                                'interpreter': os.path.abspath(sys.executable)}
                 else:
                     request = json.loads(buffer)
                     if not isinstance(request, dict):
