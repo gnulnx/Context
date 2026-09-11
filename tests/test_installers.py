@@ -68,6 +68,29 @@ def test_live_form_contains_all_steps_and_inline_embedding_progress():
     assert "50.0/100.0 MB" in model_row
 
 
+def test_active_step_spinner_advances_across_live_refreshes():
+    output = StringIO()
+    console = Console(file=output, width=160, height=40, force_terminal=False)
+    clock = [0.0]
+    console.get_time = lambda: clock[0]
+    form = InstallerForm(console, checks.STEPS)
+    form.active_step = "background_service"
+
+    console.print(form.render())
+    first_row = next(
+        line for line in output.getvalue().splitlines() if "Background service" in line
+    )
+    output.seek(0)
+    output.truncate(0)
+    clock[0] = 0.2
+    console.print(form.render())
+    second_row = next(
+        line for line in output.getvalue().splitlines() if "Background service" in line
+    )
+
+    assert first_row != second_row
+
+
 def test_live_form_keeps_history_progress_in_its_step_row():
     output = StringIO()
     console = Console(file=output, width=160, height=40, force_terminal=False)
