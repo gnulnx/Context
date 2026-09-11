@@ -6,7 +6,8 @@ import pytest
 from click.testing import CliRunner
 from rich.console import Console
 
-from bl_context.checks import CheckStatus, Step, run_checks
+from bl_context import checks
+from bl_context.checks import CheckResult, CheckStatus, Step, run_checks
 from bl_context.cli import choose_hooks_plain, main, rich_ui_enabled
 
 
@@ -40,6 +41,36 @@ def test_plain_hooks_prompt_preserves_security_choice(monkeypatch):
     rendered = output.getvalue()
     assert "outside the Codex sandbox" in rendered
     assert "manual saves still work" in rendered
+
+
+def test_successful_install_exits_zero_and_invites_immediate_recall(monkeypatch):
+    class ReadyAdapter:
+        def install(self, **_observers):
+            return [
+                CheckResult(
+                    step.step_id,
+                    step.label,
+                    CheckStatus.PASSED,
+                    (
+                        "Approve hooks on next Codex launch."
+                        if step.step_id == "codex_hooks"
+                        else "Ready"
+                    ),
+                )
+                for step in checks.STEPS
+            ]
+
+    monkeypatch.setattr("bl_context.cli.installer_for", lambda _provider: ReadyAdapter())
+
+    result = CliRunner().invoke(main, ["install", "codex", "--no-color"])
+
+    assert result.exit_code == 0
+    assert "✓ Codex Hooks" in result.output
+    assert "Approve hooks on next Codex launch." in result.output
+    assert (
+        "Ready. Launch Codex and ask it to summarize your recent sessions."
+        in result.output
+    )
 
 
 @pytest.mark.parametrize("args", [

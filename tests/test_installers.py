@@ -247,6 +247,48 @@ def test_complete_installer_uses_compact_layout_at_80_by_24():
     assert len(rendered.splitlines()) <= 24
 
 
+def test_completed_installer_makes_failure_state_explicit():
+    output = StringIO()
+    console = Console(file=output, width=160, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    for step in checks.STEPS:
+        status = (
+            checks.CheckStatus.FAILED
+            if step.step_id == "history_index"
+            else checks.CheckStatus.PASSED
+        )
+        form.results[step.step_id] = checks.CheckResult(
+            step.step_id, step.label, status, "Result"
+        )
+
+    console.print(form.render())
+
+    assert "Failed checks require attention." in output.getvalue()
+
+
+def test_full_screen_installer_reprints_final_state_after_live_screen_closes(
+    monkeypatch,
+):
+    output = StringIO()
+    console = Console(file=output, width=160, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS, full_screen=True)
+    form.results["history_index"] = checks.CheckResult(
+        "history_index",
+        "Historical sessions indexed",
+        checks.CheckStatus.FAILED,
+        "Recent Codex history is not indexed",
+    )
+    events = []
+    monkeypatch.setattr(form.live, "refresh", lambda: events.append("refresh"))
+    monkeypatch.setattr(form.live, "stop", lambda: events.append("stop"))
+
+    form.__exit__(None, None, None)
+
+    assert events == ["refresh", "stop"]
+    assert "Historical sessions indexed" in output.getvalue()
+    assert "Recent Codex history is not indexed" in output.getvalue()
+
+
 @pytest.mark.parametrize(
     ("keys", "expected"),
     [
@@ -318,34 +360,48 @@ def test_codex_install_uses_hook_choice(monkeypatch):
     assert seen == ["asked"]
 
 
-def test_skipped_hooks_use_an_unambiguous_result_label(monkeypatch):
+def test_skipped_hooks_are_a_green_confirmation(monkeypatch):
     monkeypatch.setattr("bl_context.checks.codex_hooks.skipped", lambda: True)
     step = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
 
     result = step.verify()
 
-    assert result.status == checks.CheckStatus.SKIPPED
-    assert result.label == "Codex hooks skipped"
-    assert result.summary == "Automatic capture remains disabled."
+    assert result.status == checks.CheckStatus.PASSED
+    assert result.label == "Codex Hooks"
+    assert result.summary == "Hooks not installed."
 
 
-def test_live_form_renders_skipped_hooks_result_label():
+def test_enabled_hooks_are_a_green_confirmation(monkeypatch):
+    monkeypatch.setattr("bl_context.checks.codex_hooks.skipped", lambda: False)
+    monkeypatch.setattr(
+        "bl_context.checks.codex_hooks.verify_registration", lambda: None
+    )
+    step = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
+
+    result = step.verify()
+
+    assert result.status == checks.CheckStatus.PASSED
+    assert result.label == "Codex Hooks"
+    assert result.summary == "Approve hooks on next Codex launch."
+
+
+def test_live_form_renders_skipped_hooks_as_green():
     output = StringIO()
     console = Console(file=output, width=160, force_terminal=False)
     form = InstallerForm(console, checks.STEPS)
     form.results["codex_hooks"] = checks.CheckResult(
         "codex_hooks",
-        "Codex hooks skipped",
-        checks.CheckStatus.SKIPPED,
-        "Automatic capture remains disabled.",
+        "Codex Hooks",
+        checks.CheckStatus.PASSED,
+        "Hooks not installed.",
         skip_reason="optional",
     )
 
     console.print(form.render())
 
     rendered = output.getvalue()
-    assert "–  Codex hooks skipped" in rendered
-    assert "Automatic capture remains disabled." in rendered
+    assert "✓  Codex Hooks" in rendered
+    assert "Hooks not installed." in rendered
 
 
 def test_finalizing_waits_and_records_completion(monkeypatch):

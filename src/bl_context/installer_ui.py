@@ -85,6 +85,7 @@ class InstallerForm:
 
     def __exit__(self, exc_type, exc, traceback):
         self.live.refresh()
+        final_render = self.render() if self.full_screen else None
         if (
             self.full_screen
             and exc_type is None
@@ -92,6 +93,11 @@ class InstallerForm:
         ):
             time.sleep(0.6)
         self.live.stop()
+        if final_render is not None:
+            # Rich's alternate screen is cleared when Live stops. Reprint the
+            # resolved checklist in the normal terminal buffer so failures and
+            # remediation remain available after the installer exits.
+            self.console.print(final_render)
 
     def start_step(self, step):
         self.active_step = step.step_id
@@ -353,6 +359,22 @@ class InstallerForm:
 
     def main_panel(self, *, show_details):
         resolved = len(self.results)
+        resolution = Text(
+            f"{resolved} of {len(self.steps)} steps resolved",
+            style="dim",
+        )
+        if resolved == len(self.steps):
+            failures = any(
+                result.status == CheckStatus.FAILED
+                for result in self.results.values()
+            )
+            resolution.append(" — ")
+            resolution.append(
+                "Failed checks require attention."
+                if failures
+                else "All checks passed.",
+                style="bold red" if failures else "bold green",
+            )
         content = [
             Text(self.operation, style="bold"),
             Text("Persistent context for coding agents", style="dim"),
@@ -364,10 +386,7 @@ class InstallerForm:
         content.extend(
             (
                 Text(""),
-                Text(
-                    f"{resolved} of {len(self.steps)} steps resolved",
-                    style="dim",
-                ),
+                resolution,
             )
         )
         return Panel(

@@ -47,9 +47,11 @@ python -m ruff check src tests
 python -m pytest -q
 ```
 
-Full install, status, and doctor can exit 1 until the separately reviewed Codex
-hooks are trusted. Implemented selected checks exit 0 when healthy. Uninstall
-exits 0 when installation ownership is deactivated.
+Full install, status, and doctor exit 0 when the system is healthy. Choosing to
+install hooks is confirmed as ready for approval on the next Codex launch;
+choosing not to install them is also a successful, explicit configuration.
+System-level and registration failures still exit 1. Implemented selected checks
+exit 0 when healthy. Uninstall exits 0 when installation ownership is deactivated.
 Usage errors exit with code 2; help exits with code 0. `--json` emits only a
 structured report, including ordered checks and the exit code. `--no-color`
 selects plain, non-animated output and disables colors. Interactive plain installs

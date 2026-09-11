@@ -131,7 +131,7 @@ def install():
     # Trust must be granted by the engineer in Codex /hooks, never by the installer.
 
 
-def verify():
+def verify_registration():
     storage.verify()
     service.verify()
     paths = storage.locations()
@@ -148,6 +148,13 @@ def verify():
     for event, entry in entries(paths,manifest,owned['generation']).items():
         if owned['entries'].get(event) != entry or document.get('hooks',{}).get(event,[]).count(entry) != 1:
             raise RuntimeError('Context hook registration is missing, modified, or stale')
+
+
+def verify():
+    verify_registration()
+    paths = storage.locations()
+    manifest = storage.read_manifest(paths)
+    owned = manifest['codex_hooks']
     discovered = query('hooks/list',root(),Path.home())
     hooks = [h for row in discovered['data'] for h in row['hooks']
              if h.get('command') == owned['entries']['SessionStart']['hooks'][0]['command']]
