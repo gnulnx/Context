@@ -173,6 +173,18 @@ def test_installer_window_is_bounded_and_centered_on_wide_terminals():
     assert len(border.rstrip()) <= 126
 
 
+def test_full_screen_installer_is_centered_vertically():
+    output = StringIO()
+    console = Console(file=output, width=120, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS, full_screen=True)
+
+    console.print(form.render())
+
+    lines = output.getvalue().splitlines()
+    border_index = next(index for index, line in enumerate(lines) if "╭" in line)
+    assert border_index > 0
+
+
 def test_complete_installer_uses_compact_layout_at_80_by_24():
     output = StringIO()
     console = Console(file=output, width=80, height=24, force_terminal=False)
@@ -207,10 +219,12 @@ def test_hooks_choice_uses_arrow_keys_and_enter(monkeypatch, keys, expected):
     form = InstallerForm(console, checks.STEPS)
     keypresses = iter(keys)
     monkeypatch.setattr("bl_context.installer_ui.click.getchar", keypresses.__next__)
-    monkeypatch.setattr(form.live, "stop", lambda: None)
-    monkeypatch.setattr(form.live, "start", lambda **kwargs: None)
+    pages = []
+    monkeypatch.setattr(form.live, "refresh", lambda: pages.append(form.current_page))
 
     assert form.choose_hooks() is expected
+    assert "hooks" in pages
+    assert pages[-1] == "installer"
 
 
 def test_codex_install_uses_hook_choice(monkeypatch):

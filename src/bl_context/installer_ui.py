@@ -38,6 +38,8 @@ class InstallerForm:
         self.embedding_progress = None
         self.history_index_progress = None
         self.progress_started = {}
+        self.current_page = "installer"
+        self.hooks_selected = 0
         self.live = Live(
             console=console,
             get_renderable=self.render,
@@ -82,46 +84,42 @@ class InstallerForm:
         self.live.refresh()
 
     def choose_hooks(self):
-        self.live.stop()
+        self.current_page = "hooks"
+        self.hooks_selected = 0
+        self.live.refresh()
         try:
-            selected = 0
-            with Live(
-                console=self.console,
-                get_renderable=lambda: self.render_hooks_consent(selected),
-                refresh_per_second=4,
-                screen=True,
-                transient=False,
-                vertical_overflow="crop",
-            ) as selector:
-                while True:
-                    key = click.getchar()
-                    left_key = next(
-                        (
-                            value
-                            for value in ("\x1b[D", "\x1bOD", "\xe0K")
-                            if key.startswith(value)
-                        ),
-                        None,
-                    )
-                    right_key = next(
-                        (
-                            value
-                            for value in ("\x1b[C", "\x1bOC", "\xe0M")
-                            if key.startswith(value)
-                        ),
-                        None,
-                    )
-                    if left_key:
-                        selected = 0
-                        key = key[len(left_key) :]
-                    elif right_key:
-                        selected = 1
-                        key = key[len(right_key) :]
-                    if key in ("\r", "\n") and self.hooks_page_fits(selected):
-                        return selected == 0
-                    selector.refresh()
+            while True:
+                key = click.getchar()
+                left_key = next(
+                    (
+                        value
+                        for value in ("\x1b[D", "\x1bOD", "\xe0K")
+                        if key.startswith(value)
+                    ),
+                    None,
+                )
+                right_key = next(
+                    (
+                        value
+                        for value in ("\x1b[C", "\x1bOC", "\xe0M")
+                        if key.startswith(value)
+                    ),
+                    None,
+                )
+                if left_key:
+                    self.hooks_selected = 0
+                    key = key[len(left_key) :]
+                elif right_key:
+                    self.hooks_selected = 1
+                    key = key[len(right_key) :]
+                if key in ("\r", "\n") and self.hooks_page_fits(
+                    self.hooks_selected
+                ):
+                    return self.hooks_selected == 0
+                self.live.refresh()
         finally:
-            self.live.start(refresh=True)
+            self.current_page = "installer"
+            self.live.refresh()
 
     def page_width(self):
         return max(8, min(MAX_PAGE_WIDTH, self.console.width - 4))
@@ -134,8 +132,17 @@ class InstallerForm:
     def center_page(self, panel):
         if not self.page_fits(panel):
             return self.render_resize_notice()
-        vertical = "middle" if self.full_screen else None
-        return Align.center(panel, vertical=vertical, pad=False)
+        return self.align_page(panel)
+
+    def align_page(self, panel, *, full_screen=None):
+        if full_screen is None:
+            full_screen = self.full_screen
+        return Align.center(
+            panel,
+            vertical="middle" if full_screen else None,
+            pad=False,
+            height=self.console.height if full_screen else None,
+        )
 
     def render_resize_notice(self):
         width = max(8, min(62, self.console.width - 2))
@@ -161,8 +168,7 @@ class InstallerForm:
             padding=(1, 2),
             width=width,
         )
-        vertical = "middle" if self.full_screen else None
-        return Align.center(panel, vertical=vertical, pad=False)
+        return self.align_page(panel)
 
     def hooks_panel(self, selected=0, *, compact=False):
         spacing = "\n" if compact else "\n\n"
@@ -234,8 +240,11 @@ class InstallerForm:
     def render_hooks_consent(self, selected=0):
         full = self.hooks_panel(selected)
         if self.page_fits(full):
-            return Align.center(full, vertical="middle", pad=False)
-        return self.center_page(self.hooks_panel(selected, compact=True))
+            return self.align_page(full, full_screen=True)
+        compact = self.hooks_panel(selected, compact=True)
+        if self.page_fits(compact):
+            return self.align_page(compact, full_screen=True)
+        return self.render_resize_notice()
 
     def result_detail(self, result):
         detail = result.summary
@@ -337,13 +346,17 @@ class InstallerForm:
             width=self.page_width(),
         )
 
-    def render(self):
+    def render_installer(self):
         detailed = self.main_panel(show_details=True)
         if self.page_fits(detailed):
-            vertical = "middle" if self.full_screen else None
-            return Align.center(detailed, vertical=vertical, pad=False)
+            return self.align_page(detailed)
         compact = self.main_panel(show_details=False)
         return self.center_page(compact)
+
+    def render(self):
+        if self.current_page == "hooks":
+            return self.render_hooks_consent(self.hooks_selected)
+        return self.render_installer()
 
     def render_embedding_progress(self):
         stage, completed, total = self.embedding_progress
