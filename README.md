@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://pypi.org/project/bl-context/"><img src="https://img.shields.io/pypi/v/bl-context?color=blue&style=flat-square" alt="PyPI version" /></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square" alt="Python 3.10+" />
-  <img src="https://img.shields.io/badge/platform-linux-lightgrey?style=flat-square" alt="Platform Linux" />
+  <img src="https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey?style=flat-square" alt="Platforms Linux and macOS" />
   <img src="https://img.shields.io/badge/privacy-100%25%20local%20%2F%20offline-success?style=flat-square" alt="100% Local" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License MIT" />
 </p>
@@ -37,7 +37,7 @@ Base Layer Context bridges this gap with a lightweight, private, system-level me
 * 🔒 **100% Local & Private:** Embeddings run locally on your CPU with FastEmbed (`BAAI/bge-small-en`). Vectors stay on your SSD in Qdrant. Zero telemetry, zero external API calls.
 * ⚡ **Global Machine Scope:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
 * 📜 **Strict Provenance:** No hallucinated memories. Every retrieved passage links back to exact transcript timestamps, line offsets, and session IDs.
-* 🛡️ **Zero-Surprise Permissions:** Runs entirely inside your Linux systemd user session with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
+* 🛡️ **Zero-Surprise Permissions:** Runs in your user session through systemd on Linux or a launchd LaunchAgent on macOS, with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
 
 ---
 
@@ -49,6 +49,14 @@ Base Layer Context bridges this gap with a lightweight, private, system-level me
 pip install bl-context
 ```
 
+On macOS, install into an isolated tool environment with [uv](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+uv tool install bl-context
+```
+
+Use Python 3.10 or newer and install the Codex CLI before onboarding. Run onboarding from a logged-in macOS desktop session. The LaunchAgent starts at login and uses the installed Python environment; keep that environment available.
+
 ### 2. Onboard your agent
 
 ```bash
@@ -56,8 +64,8 @@ blctx install codex
 ```
 
 The interactive onboarding wizard will:
-1. Initialize private, encrypted user directories (`0700`).
-2. Start the lightweight background daemon (`blctxd`) as a systemd user service.
+1. Initialize private user directories (`0700`; filesystem permissions, not encryption).
+2. Start the lightweight background daemon (`blctxd`) as a systemd user service on Linux or a LaunchAgent on macOS.
 3. Register the Model Context Protocol (MCP) server with Codex.
 4. Install the `base-layer-context` recall skill.
 5. Verify local CPU embeddings (`BAAI/bge-small-en`, 384 dimensions).
@@ -168,14 +176,27 @@ Context enforces strict file permission boundaries:
 | **Cache** | `~/.cache/bl-context/` | `0700` | Pinned FastEmbed model weights (SHA-256 verified) |
 | **State** | `~/.local/state/bl-context/` | `0700` | Installation manifest & Unix socket (`daemon.sock`, `0600`) |
 
-* Overrides: Respects absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_STATE_HOME`.
+On macOS the defaults are:
+
+| Purpose | Path |
+| :--- | :--- |
+| **Data** | `~/Library/Application Support/bl-context/data/` |
+| **Config** | `~/Library/Application Support/bl-context/config/` |
+| **Cache** | `~/Library/Caches/bl-context/` |
+| **State & logs** | `~/Library/Application Support/bl-context/state/` (`installation.json`, `daemon.sock`, `daemon.log`) |
+| **LaunchAgent** | `~/Library/LaunchAgents/com.baselayer.context.<installation-id>.plist` |
+
+The same private directory and file permissions apply on both platforms. The LaunchAgent uses an absolute executable and explicitly pinned storage paths, so it works without your interactive shell's PATH. macOS may list the Python executable in **System Settings → General → Login Items & Extensions**; allow it to run in the background if prompted. Codex hook trust is a separate approval in `/hooks`.
+
+* Overrides: Both platforms respect absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_STATE_HOME`, appending `bl-context/`. Relative XDG values use the platform defaults. `BLCTX_DATA_DIR`, `BLCTX_CONFIG_DIR`, `BLCTX_CACHE_DIR`, and `BLCTX_STATE_DIR` override exact directories; the installer uses these to pin native paths for child processes. All four locations must remain separate. On macOS, the LaunchAgent always lives in `~/Library/LaunchAgents` so it loads at login.
+* Long paths: macOS Unix socket paths are limited to 103 bytes. If your home/state path exceeds this, select a shorter private state location with `XDG_STATE_HOME` before installing and retain that override for CLI use.
 * Isolation: No sudo, no system-level daemon, no open network ports.
 
 ---
 
 ## Documentation & Contributing
 
-* **[Developer & Contributor Guide](docs/DEVELOPMENT.md):** Test harnesses, systemd integration testing, focused step flags (`--step`), and MCP tool specifications.
+* **[Developer & Contributor Guide](docs/DEVELOPMENT.md):** Test harnesses, systemd and launchd integration testing, focused step flags (`--step`), and MCP tool specifications.
 
 ---
 
