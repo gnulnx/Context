@@ -162,6 +162,24 @@ def test_wide_short_hooks_screen_uses_complete_compact_layout():
     assert len(rendered.splitlines()) <= 22
 
 
+def test_hooks_screen_uses_absolute_center_without_leading_blank_rows():
+    output = StringIO()
+    console = Console(
+        file=output,
+        width=197,
+        height=51,
+        force_terminal=True,
+        color_system=None,
+    )
+    form = InstallerForm(console, checks.STEPS, full_screen=True)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert rendered.startswith("\x1b[2J\x1b[13;43H╭")
+    assert "Automatic Codex capture" in rendered
+
+
 def test_undersized_terminal_gets_resize_notice_instead_of_clipping():
     output = StringIO()
     console = Console(file=output, width=60, height=15, force_terminal=False)

@@ -5,6 +5,7 @@ import time
 import click
 from rich.align import Align
 from rich.console import Group
+from rich.control import Control
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import ProgressBar, Spinner
@@ -148,6 +149,14 @@ class InstallerForm:
             height=self.usable_height() if full_screen else None,
         )
 
+    def position_screen_page(self, panel):
+        """Center a full-screen page without scrolling through blank rows."""
+        options = self.console.options.update(width=self.console.width, height=None)
+        height = len(self.console.render_lines(panel, options, pad=False))
+        left = max((self.console.width - self.page_width()) // 2, 0)
+        top = max((self.usable_height() - height) // 2, 0)
+        return Group(Control.clear(), Control.move_to(left, top), panel)
+
     def render_resize_notice(self):
         width = max(8, min(62, self.console.width - 2))
         notice = Group(
@@ -244,10 +253,10 @@ class InstallerForm:
     def render_hooks_consent(self, selected=0):
         full = self.hooks_panel(selected)
         if self.page_fits(full):
-            return self.align_page(full, full_screen=True)
+            return self.position_screen_page(full)
         compact = self.hooks_panel(selected, compact=True)
         if self.page_fits(compact):
-            return self.align_page(compact, full_screen=True)
+            return self.position_screen_page(compact)
         return self.render_resize_notice()
 
     def result_detail(self, result):
