@@ -1,5 +1,4 @@
 """Owned hooks.json registration and independently observed trust/capture checks."""
-import hashlib
 import json
 import os
 import shlex
@@ -11,6 +10,7 @@ from pathlib import Path
 from . import capture, service, storage
 from .codex_probe import query
 from .mcp_registration import config, root
+from .runtime_version import hook_handler_version as handler_version
 
 
 def read(path):
@@ -36,13 +36,6 @@ def write(path, document):
         storage.sync_directory(path.parent)
     finally:
         Path(temporary).unlink(missing_ok=True)
-
-
-def handler_version():
-    digest = hashlib.sha256()
-    for name in ('capture.py', 'hook_handler.py'):
-        digest.update(Path(__file__).with_name(name).read_bytes())
-    return digest.hexdigest()
 
 
 def entries(paths, manifest, generation):

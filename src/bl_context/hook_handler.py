@@ -4,7 +4,7 @@ import json
 import sys
 
 from .capture import receive
-from .codex_hooks import handler_version
+from .runtime_version import hook_handler_version
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--handler-version',required=True)
     args = parser.parse_args()
     try:
-        if args.handler_version != handler_version():
+        if args.handler_version != hook_handler_version():
             raise ValueError('Hook handler changed; reinstall and review its updated definition in Codex /hooks')
         payload = sys.stdin.buffer.read(65537)
         if len(payload) > 65536:

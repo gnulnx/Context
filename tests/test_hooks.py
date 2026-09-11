@@ -55,6 +55,17 @@ def test_binding_duplicates_resume_fork_null_path_and_disconnect(tmp_path):
     assert send(event()) == {}  # Old registration generation cannot enqueue.
 
 
+def test_hook_imports_only_capture_runtime():
+    result = subprocess.run(
+        [sys.executable, '-c',
+         'import sys; import bl_context.hook_handler; '
+         'assert not {"mcp", "rich", "fastembed", "qdrant_client", '
+         '"bl_context.codex_hooks", "bl_context.service", "bl_context.embedding"}.intersection(sys.modules)'],
+        capture_output=True, text=True, timeout=2,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_handler_bounds_and_invalid_input(tmp_path):
     paths, identifier, generation = setup()
     command = [sys.executable,'-m','bl_context.hook_handler','--installation-id',identifier,'--generation',generation,'--handler-version',codex_hooks.handler_version()]
