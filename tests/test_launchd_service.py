@@ -247,6 +247,7 @@ def test_real_launchd_lifecycle(tmp_path, monkeypatch):
             if not cycle:
                 # A real Python-environment upgrade must replace the loaded job,
                 # since kickstart alone would retain its old ProgramArguments.
+                manifest = storage.read_manifest(paths)
                 manifest['interpreter'] = sys.executable
                 storage.atomic_manifest(paths, manifest)
                 service.install()
