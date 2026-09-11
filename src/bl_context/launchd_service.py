@@ -135,9 +135,12 @@ def verify():
         raise RuntimeError('LaunchAgent is not running. ' + DIAGNOSTICS)
     pid = int(property_value(report, 'pid'))
     response = identity(paths)
-    expected = {'installation_id': manifest['installation_id'], 'pid': pid, 'protocol_version': 1,
-                'interpreter': manifest['interpreter']}
-    if any(response.get(key) != value for key, value in expected.items()):
+    expected = {'installation_id': manifest['installation_id'], 'pid': pid, 'protocol_version': 1}
+    reported_interpreter = response.get('interpreter')
+    if (any(response.get(key) != value for key, value in expected.items())
+            or not isinstance(reported_interpreter, str)
+            or not Path(reported_interpreter).is_absolute()
+            or Path(reported_interpreter).resolve() != Path(manifest['interpreter']).resolve()):
         raise RuntimeError('Running daemon identity does not match launchd')
     if response.get('runtime_fingerprint') != runtime_fingerprint():
         raise RuntimeError('Daemon code is stale; reinstall the background service to restart it')
