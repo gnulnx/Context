@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from bl_context import retrieval_cli, service, storage
+from bl_context import retrieval_cli, storage
+from bl_context import systemd_service as service
 
 REAL_BUS = os.environ.get('DBUS_SESSION_BUS_ADDRESS')
 REAL_RUNTIME = os.environ.get('XDG_RUNTIME_DIR')

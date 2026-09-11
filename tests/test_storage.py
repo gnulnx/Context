@@ -48,7 +48,7 @@ def test_real_cli_lifecycle(tmp_path):
         assert snapshot(tmp_path) == before
         for cmd in ('status', 'doctor'):
             run([cmd, '--step', 'data_directory'], 0)
-        run(['install', 'codex'], 1)
+        run(['install', 'codex', '--step', 'embedding_model'], 1)
         run(['uninstall', 'codex'], 0)
         assert storage.read_manifest(paths)['installation_id'] == manifest['installation_id']
         assert storage.database_path(paths).exists()
@@ -176,8 +176,55 @@ def test_custom_xdg_and_existing_unknown_files(tmp_path, monkeypatch):
 
 
 def test_relative_xdg_uses_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, 'platform', 'linux')
     monkeypatch.setenv('XDG_DATA_HOME', 'relative')
     assert storage.locations()['data'] == tmp_path / '.local/share/bl-context'
+
+
+@pytest.mark.parametrize('platform', ['linux', 'darwin'])
+def test_native_paths_and_child_environment(tmp_path, monkeypatch, platform):
+    monkeypatch.setattr(sys, 'platform', platform)
+    paths = storage.locations()
+    if platform == 'darwin':
+        support = tmp_path / 'Library/Application Support/bl-context'
+        assert paths == {
+            'data': support / 'data', 'config': support / 'config',
+            'state': support / 'state', 'cache': tmp_path / 'Library/Caches/bl-context',
+        }
+    else:
+        assert paths['state'] == tmp_path / '.local/state/bl-context'
+    environment = storage.environment(paths)
+    monkeypatch.setenv('HOME', str(tmp_path / 'another host'))
+    for key, value in environment.items():
+        monkeypatch.setenv(key, value)
+    assert storage.locations() == paths
+
+
+@pytest.mark.parametrize('platform', ['linux', 'darwin'])
+def test_xdg_overrides_native_defaults(tmp_path, monkeypatch, platform):
+    monkeypatch.setattr(sys, 'platform', platform)
+    monkeypatch.setenv('XDG_DATA_HOME', str(tmp_path / 'custom data'))
+    monkeypatch.setenv('XDG_STATE_HOME', 'relative')
+    paths = storage.locations()
+    assert paths['data'] == tmp_path / 'custom data/bl-context'
+    assert paths['state'].is_relative_to(tmp_path)
+    monkeypatch.setenv('BLCTX_STATE_DIR', str(tmp_path / 'pinned state'))
+    assert storage.locations()['state'] == tmp_path / 'pinned state'
+    monkeypatch.setenv('BLCTX_STATE_DIR', 'relative')
+    with pytest.raises(RuntimeError, match='must be absolute'):
+        storage.locations()
+
+
+def test_unsupported_platform_is_actionable(monkeypatch):
+    monkeypatch.setattr(sys, 'platform', 'win32')
+    with pytest.raises(RuntimeError, match='Linux and macOS'):
+        storage.locations()
+
+
+def test_socket_limit_counts_encoded_bytes(monkeypatch):
+    monkeypatch.setattr(sys, 'platform', 'darwin')
+    with pytest.raises(RuntimeError, match='shorter absolute XDG_STATE_HOME'):
+        storage.socket_path({'state': Path('/' + 'é' * 47)})
 
 
 def test_explicit_disconnect_supersedes_pending_index_jobs():

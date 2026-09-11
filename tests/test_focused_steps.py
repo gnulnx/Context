@@ -224,4 +224,6 @@ def test_real_subprocess_lifecycle(tmp_path):
             assert not (tmp_path / 'owner').exists()
     for args in [['install', 'codex'], ['status'], ['doctor']]:
         invoke([*args, '--step', 'data_directory'], 0, fixture=False)
-    invoke(['install', 'codex'], 1, fixture=False)
+    # Exercise a real failing prerequisite without loading a desktop LaunchAgent
+    # in a child process that cannot inherit pytest's service-manager isolation.
+    invoke(['install', 'codex', '--step', 'embedding_model'], 1, fixture=False)
