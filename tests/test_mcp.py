@@ -1,17 +1,20 @@
 import asyncio
-from contextlib import closing
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
 import uuid
+from pathlib import Path
 
 import pytest
-from bl_context import storage, mcp_registration
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+from bl_context import mcp_registration, service, storage
 from bl_context.index import Index
+from bl_context.service import identity
 
 
 def test_sessions_and_durable_updates(monkeypatch):
@@ -71,8 +74,6 @@ def test_registration_preserves_config_and_handles_collisions(tmp_path):
 
 
 def test_stdio_tools_and_daemon_failure(tmp_path):
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
     storage.install()
     identifier = storage.read_manifest(storage.locations())['installation_id']
     async def exercise():
@@ -93,7 +94,6 @@ REAL_RUNTIME = os.environ.get('XDG_RUNTIME_DIR')
 
 @pytest.mark.skipif(os.environ.get('BLCTX_SYSTEMD_TEST') != '1', reason='Explicit systemd/Codex acceptance')
 def test_mcp_install_lifecycle(tmp_path, monkeypatch):
-    from bl_context import service
     for key, value in [('DBUS_SESSION_BUS_ADDRESS', REAL_BUS), ('XDG_RUNTIME_DIR', REAL_RUNTIME)]:
         if value:
             monkeypatch.setenv(key, value)
@@ -132,18 +132,10 @@ def test_mcp_install_lifecycle(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Real model and MCP acceptance')
-def test_live_session_updates_over_stdio(tmp_path):
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
-    from bl_context.service import identity
+def test_live_session_updates_over_stdio(tmp_path, install_embedding):
     storage.install()
     paths = storage.locations()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory, before = storage.prepare_index_artifacts(paths, 'embeddings')
-        shutil.copytree(cache, directory, dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths, 'embeddings', before)
+    install_embedding()
     identifier = storage.read_manifest(paths)['installation_id']
     child = subprocess.Popen([sys.executable,'-m','bl_context.daemon','--installation-id',identifier], stderr=subprocess.PIPE)
     async def exercise():

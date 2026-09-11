@@ -24,7 +24,8 @@ The onboarding CLI uses Click and Rich. The data directory step is implemented
 and tested on Linux, along with the systemd user service and Codex MCP
 registration; the remaining integration checks report failure.
 Full installation starts the Context user service and registers its MCP server.
-History indexing is explicit; model download occurs on first embedding use.
+History indexing is explicit; the `embedding_model` installer step downloads and
+verifies the local model before indexing can use it.
 The historical-recall/update skill and lifecycle hooks are installed. Codex requires a separate user trust review before hooks run.
 Use the checkout installation below to test this development version.
 
@@ -37,6 +38,7 @@ blctx install codex --no-history --json
 blctx status
 blctx doctor
 blctx uninstall codex
+python -m ruff check src tests
 python -m pytest -q
 ```
 
@@ -75,8 +77,8 @@ unknown step IDs and history selections combined with `--no-history` exit 2.
 `skip_reason: "no_history"`; summary wording cannot authorize a skip.
 
 Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp`,
-`codex_skills`, `codex_hooks`, `embedding_model`, `session_discovery`,
-`history_index`, `service_health`, `mcp_health`, `history_retrieval`.
+`codex_skills`, `embedding_model`, `session_discovery`, `history_index`,
+`service_health`, `mcp_health`, `history_retrieval`, `codex_hooks`.
 
 The data step has a real subprocess acceptance test covering install, status,
 doctor, uninstall, reinstall and purge. The execution foundation also retains
@@ -231,6 +233,7 @@ fingerprint is recorded to prevent silently mixing different embeddings.
 ```sh
 source .venv/bin/activate
 blctx install codex --step background_service
+blctx install codex --step embedding_model
 
 # Start with one transcript you reviewed in explore:
 blctx index /absolute/path/to/session.jsonl --wait
@@ -248,9 +251,26 @@ blctx context CONTEXT_ID
 
 These commands emit JSON. Index requests return a durable job ID immediately;
 `--wait` polls for up to ten minutes (progress goes to stderr). If it times out,
-the job keeps running: inspect it with `blctx index-status JOB_ID`. First indexing
-use downloads the model into Context's private cache. Embedding inference is
-local; no transcript text is sent to an embedding API.
+the job keeps running: inspect it with `blctx index-status JOB_ID`. Indexing and
+queries use only the configured, verified local model and never initiate a model
+download. Embedding inference is local; no transcript text is sent to an API.
+
+### Download and verify the embedding model
+
+```sh
+blctx install codex --step embedding_model
+blctx status --step embedding_model --json
+blctx doctor --step embedding_model
+```
+
+The installer uses one inline Rich progress row for cache checks, resumable
+downloads, loading, and retrieval verification. JSON output remains progress-free.
+The CPU model is `BAAI/bge-small-en`, downloaded from `Qdrant/bge-small-en` at
+pinned revision `8791246cc2a79c7949a4dc0d4a018cbd7d024879`. All six files are
+checked against fixed sizes and SHA256 hashes before activation. Verification is
+offline and checks finite, nonzero 384-dimensional vectors plus ranked retrieval.
+Interrupted downloads remain resumable; normal uninstall retains the owned cache,
+while `--purge` removes only recorded model artifacts.
 
 The importer uses the same selection policy as `explore --view preview`:
 user requests, visible progress commentary, and final answers are embedded,

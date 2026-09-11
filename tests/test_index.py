@@ -1,16 +1,17 @@
 """Real embedding/retrieval acceptance runs explicitly; no network in normal CI."""
-from contextlib import closing
 import json
 import os
-from pathlib import Path
-import shutil
 import subprocess
 import sys
 import time
+from contextlib import closing
+from pathlib import Path
 
 import pytest
+
 from bl_context import storage
 from bl_context.index import Index, epoch
+from bl_context.service import identity
 
 
 def source(path, project='/project/a', text='We chose lithium batteries for the rover power supply.', day='2026-09-08'):
@@ -39,15 +40,10 @@ def test_index_status_and_query_validation(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Explicit real FastEmbed integration test')
-def test_real_index_lifecycle(tmp_path):
+def test_real_index_lifecycle(tmp_path, install_embedding):
     storage.install()
     paths = storage.locations()
-    cached = Path('/tmp/context-embedding-test-cache')
-    if cached.exists():
-        directory, before = storage.prepare_index_artifacts(paths, 'embeddings')
-        shutil.copytree(cached, directory, dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths, 'embeddings', before)
+    install_embedding()
     a, b = tmp_path/'a.jsonl', tmp_path/'b.jsonl'
     source(a)
     source(b, '/project/b', 'The web interface uses a purple navigation sidebar.', '2026-09-09')
@@ -115,15 +111,10 @@ def test_long_context_can_be_read_without_losing_tail(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Explicit real daemon/embedding integration')
-def test_daemon_replays_durable_jobs_and_serves_cli(tmp_path):
-    from bl_context.service import identity
+def test_daemon_replays_durable_jobs_and_serves_cli(tmp_path, install_embedding):
     storage.install()
     paths = storage.locations()
-    directory, before = storage.prepare_index_artifacts(paths, 'embeddings')
-    if Path('/tmp/context-embedding-test-cache').exists():
-        shutil.copytree('/tmp/context-embedding-test-cache', directory, dirs_exist_ok=True)
-        directory.chmod(0o700)
-    storage.record_index_artifacts(paths, 'embeddings', before)
+    install_embedding()
     transcript = tmp_path/'source.jsonl'
     source(transcript)
     original = transcript.read_bytes()

@@ -1,19 +1,22 @@
 """Daemon-owned local retrieval. SQLite is authoritative; Qdrant is rebuildable."""
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing, nullcontext
-from datetime import datetime, timezone
 import hashlib
 import json
-import os
-from pathlib import Path
 import sqlite3
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing, nullcontext
+from datetime import datetime, timezone
+from pathlib import Path
 
-from . import storage
+from qdrant_client import QdrantClient, models
+from tokenizers import Tokenizer
+
+from . import capture, embedding, storage
+from .embedding_runtime import load_files
 from .preview import preview
 
-MODEL = 'BAAI/bge-small-en'
+MODEL = embedding.MODEL
 COLLECTION = 'context_v1'
 POLICY = 'preview-v2-visible-token384-overlap48'
 
@@ -113,8 +116,7 @@ class Index:
                 return self.open_session(request) if operation == 'open_session' else self.log_update(request)
         if operation == 'index_status':
             result = self.status(request.get('job_id'))
-            from .capture import status
-            result['capture'] = status(self.paths)
+            result['capture'] = capture.status(self.paths)
             return result
         return self.executor.submit(self.query, request).result(timeout=30)
 
@@ -155,14 +157,10 @@ class Index:
         return status
 
     def load_model(self):
+        embedding.require_active(self.paths)
         if self.model is None:
-            from fastembed import TextEmbedding
-            from tokenizers import Tokenizer
-            directory, before = storage.prepare_index_artifacts(self.paths, 'embeddings')
-            try:
-                self.model = TextEmbedding(model_name=MODEL, cache_dir=str(directory), threads=2, cuda=False)
-            finally:
-                storage.record_index_artifacts(self.paths, 'embeddings', before)
+            embedding.check_files(self.paths)
+            self.model = load_files(embedding.directory(self.paths))
             model_dir = Path(self.model.model._model_dir)
             digest = hashlib.sha256()
             for filename in (self.model.model.model_description.model_file, 'tokenizer.json'):
@@ -192,7 +190,6 @@ class Index:
                 break
 
     def open_vectors(self):
-        from qdrant_client import QdrantClient, models
         if self.vectors is None:
             directory, self.vector_baseline = storage.prepare_index_artifacts(self.paths, 'vectors')
             self.vectors = QdrantClient(path=str(directory))
@@ -238,7 +235,6 @@ class Index:
                        ('partial' if partial else 'complete', json.dumps(report), utcnow(), job_id))
 
     def index_file(self, path, context_session_id=None, capture_generation=None):
-        from qdrant_client import models
         storage.safe_path(path)
         data = preview(path, 1, 2**63, details=True)
         size = data['snapshot_bytes']
@@ -469,7 +465,6 @@ class Index:
             with closing(self.connect()) as db, db:
                 db.executemany('INSERT OR REPLACE INTO context_chunks VALUES (?,?,?,?)', rows)
                 db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (revision,))
-            from qdrant_client import models
             vectors.upsert(COLLECTION, [models.PointStruct(id=r[0],vector=json.loads(r[3]),payload=json.loads(r[2])) for r in rows])
             with closing(self.connect()) as db, db:
                 db.execute("UPDATE index_settings SET value='0' WHERE key='dirty' AND value=?", (revision,))
@@ -519,7 +514,6 @@ class Index:
                     messages = db.execute(f"SELECT document FROM context_messages WHERE context_id=? AND {where} AND json_extract(document,'$.decision')='index' ORDER BY position LIMIT 21", (row['context_id'], *params)).fetchall()
                     documents.append({'context_id': row['context_id'], 'latest_timestamp': row['latest'], 'messages': [json.loads(m[0]) for m in messages[:20]], 'messages_truncated': len(messages) > 20})
             else:
-                from qdrant_client import models
                 query = request.get('query')
                 if not isinstance(query, str) or not query.strip() or len(query) > 2000:
                     raise ValueError('Query must contain 1..2000 characters')

@@ -1,12 +1,11 @@
 """Short hook-side SQLite writes; daemon-side incremental reconciliation."""
-from contextlib import closing
 import hashlib
 import json
-import os
-from pathlib import Path
 import sqlite3
 import time
 import uuid
+from contextlib import closing
+from pathlib import Path
 
 from . import storage
 

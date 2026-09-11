@@ -1,8 +1,8 @@
 """Conservative, inspectable ingestion proposals. Never persists transcript data."""
-from collections import Counter
-import json
 import hashlib
+import json
 import os
+from collections import Counter
 
 
 def classify_transcript(path):

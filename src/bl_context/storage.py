@@ -1,16 +1,17 @@
 """Private Linux storage and the ownership boundary for installation lifecycle."""
 
-from contextlib import closing, contextmanager
+import fcntl
 import json
 import os
-from pathlib import Path
 import sqlite3
 import stat
 import sys
 import sysconfig
 import tempfile
+import time
 import uuid
-
+from contextlib import closing, contextmanager
+from pathlib import Path
 
 VERSION = 1
 
@@ -114,14 +115,12 @@ def sync_directory(path):
 @contextmanager
 def locked(paths, timeout=None):
     # Lock an existing directory: no lock file, and verification never creates it.
-    import fcntl
     private(paths['state'], directory=True)
     fd = os.open(paths['state'], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         if timeout is None:
             fcntl.flock(fd, fcntl.LOCK_EX)
         else:
-            import time
             deadline = time.monotonic() + timeout
             while True:
                 try:
@@ -249,6 +248,7 @@ def uninstall(purge=False):
             # A replacement database is not ours merely because its name matches.
             validate_database(paths, manifest['installation_id'])
         manifest['state'] = 'inactive'
+        manifest.pop('embedding_model', None)
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)

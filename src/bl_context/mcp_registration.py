@@ -1,9 +1,10 @@
 """Owned Codex registration using the supported CLI; preserve unrelated config."""
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
+from pathlib import Path
+
 try:
     import tomllib
 except ImportError:

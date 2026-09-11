@@ -1,16 +1,16 @@
 """Owned hooks.json registration and independently observed trust/capture checks."""
-from contextlib import closing
-import json
 import hashlib
+import json
 import os
-from pathlib import Path
 import shlex
 import tempfile
 import uuid
+from contextlib import closing
+from pathlib import Path
 
-from . import capture, storage
-from .mcp_registration import root, config
+from . import capture, service, storage
 from .codex_probe import query
+from .mcp_registration import config, root
 
 
 def read(path):
@@ -98,7 +98,6 @@ def install():
 
 def verify():
     storage.verify()
-    from . import service
     service.verify()
     paths = storage.locations()
     manifest = storage.read_manifest(paths)

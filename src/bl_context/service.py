@@ -1,10 +1,11 @@
 """Linux systemd user service adapter; all operations are installation-scoped."""
+import fcntl
 import json
 import os
-from pathlib import Path
 import socket
 import stat
 import subprocess
+from pathlib import Path
 
 from . import storage
 from .runtime_version import runtime_fingerprint
@@ -164,7 +165,6 @@ def uninstall():
     endpoint = paths['state'] / 'daemon.sock'
     if endpoint.exists():
         # A killed daemon can leave its socket; acquire the writer lock first.
-        import fcntl
         fd = os.open(paths['data'], os.O_RDONLY | os.O_DIRECTORY)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)

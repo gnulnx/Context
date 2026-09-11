@@ -4,14 +4,18 @@ import fcntl
 import json
 import logging
 import os
-from pathlib import Path
 import signal
 import socket
+import sqlite3
 import stat
 import threading
 import time
+from contextlib import closing
 
 from . import storage
+from .capture import reconcile
+from .index import Index
+from .runtime_version import runtime_fingerprint
 
 
 def main():
@@ -20,7 +24,6 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-    from .runtime_version import runtime_fingerprint
     fingerprint = runtime_fingerprint()
     storage.verify()
     paths = storage.locations()
@@ -67,7 +70,6 @@ def main():
                         raise ValueError('Expected JSON object')
                     with engine_lock:
                         if engine is None:
-                            from .index import Index
                             engine = Index(paths)
                     response = engine.submit(request)
             except Exception as exc:
@@ -88,12 +90,9 @@ def main():
             with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as channel:
                 channel.connect('\0' + notify[1:] if notify.startswith('@') else notify)
                 channel.sendall(b'READY=1')
-        from contextlib import closing
-        import sqlite3
         with closing(sqlite3.connect(storage.database_path(paths))) as db:
             initialized = db.execute("SELECT 1 FROM sqlite_master WHERE name='ingest_jobs'").fetchone()
         if initialized or manifest.get('codex_hooks'):
-            from .index import Index
             engine = Index(paths)
         logging.info('Ready installation=%s pid=%s', args.installation_id, os.getpid())
         capture_future = None
@@ -103,10 +102,8 @@ def main():
                 next_capture = time.monotonic() + 2
                 with engine_lock:
                     if engine is None and storage.read_manifest(paths).get('codex_hooks'):
-                        from .index import Index
                         engine = Index(paths)
                 if engine is not None:
-                    from .capture import reconcile
                     capture_future = engine.executor.submit(reconcile, engine)
             try:
                 connection, _ = server.accept()

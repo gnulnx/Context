@@ -1,11 +1,12 @@
 """Package-backed skill installation with hash-based ownership and upgrades."""
 import hashlib
-from importlib.resources import files
 import os
-from pathlib import Path
 import tempfile
+from importlib.resources import files
+from pathlib import Path
 
 from . import storage
+from .mcp_registration import config
 
 SKILL_NAME = 'base-layer-context'
 SKILL_VERSION = '0.2.0'
@@ -96,7 +97,6 @@ def verify():
     if path != target():
         raise RuntimeError('Current CODEX_HOME differs from the owned skill root')
     check_duplicates()
-    from .mcp_registration import config
     settings = config(root()).get('skills', {}).get('config', [])
     if any(entry.get('enabled') is False and entry.get('path') == str(path) for entry in settings):
         raise RuntimeError('Context skill is disabled in Codex configuration; preserving that preference')

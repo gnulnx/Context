@@ -1,17 +1,19 @@
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 
 import pytest
+from test_index import source
+
 from bl_context import capture, codex_hooks, storage
+from bl_context.codex_probe import query
 from bl_context.index import Index
 
 
@@ -111,7 +113,6 @@ def test_fast_ack_while_embedding_worker_is_busy():
 @pytest.mark.skipif(shutil.which('codex') is None, reason='Real Codex hook discovery required')
 def test_real_hook_discovery_reports_untrusted_without_bypass(tmp_path):
     setup()
-    from bl_context.codex_probe import query
     data = query('hooks/list',codex_hooks.root(),tmp_path)
     hooks = [h for row in data['data'] for h in row['hooks'] if 'bl_context.hook_handler' in h.get('command','')]
     assert len(hooks) == 3
@@ -123,15 +124,9 @@ def test_real_hook_discovery_reports_untrusted_without_bypass(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Real background embedding test')
-def test_reconciliation_restart_and_visible_update_dedup(tmp_path):
-    from test_index import source
+def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embedding):
     paths, identifier, generation = setup()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory,before = storage.prepare_index_artifacts(paths,'embeddings')
-        shutil.copytree(cache,directory,dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths,'embeddings',before)
+    install_embedding()
     path = tmp_path/'live.jsonl'
     source(path, project='/project')
     progress = 'The rover battery integration now passes its electrical tests.'
@@ -189,16 +184,9 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path):
 
 
 @pytest.mark.skipif(os.environ.get('BLCTX_INDEX_TEST') != '1', reason='Actual daemon/capture/model acceptance')
-def test_actual_daemon_drains_hooks_and_recovers_restart(tmp_path):
-    from test_index import source
-    from bl_context.service import identity
+def test_actual_daemon_drains_hooks_and_recovers_restart(tmp_path, install_embedding):
     paths,identifier,generation = setup()
-    cache = Path('/tmp/context-embedding-test-cache')
-    if cache.exists():
-        directory,before = storage.prepare_index_artifacts(paths,'embeddings')
-        shutil.copytree(cache,directory,dirs_exist_ok=True)
-        directory.chmod(0o700)
-        storage.record_index_artifacts(paths,'embeddings',before)
+    install_embedding()
     path = tmp_path/'capture.jsonl'
     source(path)
     capture.receive(event(path),identifier,generation)
@@ -207,8 +195,10 @@ def test_actual_daemon_drains_hooks_and_recovers_restart(tmp_path):
         deadline=time.monotonic()+30
         while time.monotonic()<deadline:
             try:
-                if check(): return
-            except OSError: pass
+                if check():
+                    return
+            except OSError:
+                pass
             time.sleep(.1)
         pytest.fail('Capture did not complete in time')
     child=subprocess.Popen(command,stderr=subprocess.PIPE)

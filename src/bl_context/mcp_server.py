@@ -1,11 +1,12 @@
 """Stdio MCP interface to the installation-bound Context daemon."""
 import argparse
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal, Annotated
+from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
+
 from . import storage
 from .retrieval_cli import call
 

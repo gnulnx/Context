@@ -1,14 +1,16 @@
 """CLI clients for the daemon's indexing and retrieval protocol."""
-from datetime import datetime, timedelta, timezone
 import json
 import os
-from pathlib import Path
 import socket
 import stat
 import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import click
+
 from . import storage
+from .embedding import MODEL
 
 
 def call(request):
@@ -62,8 +64,11 @@ def index_command(session, root, wait):
         return
     result = call({'operation': 'index', 'sources': sources})
     if wait:
-        from .index import MODEL
-        click.echo(f"Queued {result['job_id']}; indexing {len(sources)} source(s). First use downloads {MODEL}.", err=True)
+        click.echo(
+            f"Queued {result['job_id']}; indexing {len(sources)} source(s). "
+            f"The configured model is {MODEL}.",
+            err=True,
+        )
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
             result = call({'operation': 'index_status', 'job_id': result.get('job_id') or result['id']})

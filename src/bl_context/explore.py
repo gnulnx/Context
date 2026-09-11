@@ -5,6 +5,8 @@ from pathlib import Path
 
 import click
 
+from .preview import preview
+
 
 def read_records(path, start, limit, view):
     records = []
@@ -72,7 +74,6 @@ def explore(ctx, session, root, limit, start_line, view, details, json_output, n
                     'has_more': len(files) > limit}
         else:
             if view == 'preview':
-                from .preview import preview
                 data = preview(session.expanduser().absolute(), start_line, limit, details=details)
             else:
                 data = read_records(session.expanduser().absolute(), start_line, limit, view)

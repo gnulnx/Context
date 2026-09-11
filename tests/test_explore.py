@@ -1,5 +1,7 @@
 import json
+
 from click.testing import CliRunner
+
 from bl_context.cli import main
 
 

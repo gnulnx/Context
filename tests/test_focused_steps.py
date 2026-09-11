@@ -1,15 +1,21 @@
 """Foundation acceptance: real files and child processes, no product green claims."""
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from bl_context.checks import (
-    STEPS, CheckResult, CheckStatus, Step, checks_succeeded, is_ready, run_checks,
+    STEPS,
+    CheckResult,
+    CheckStatus,
+    Step,
+    checks_succeeded,
+    is_ready,
+    run_checks,
 )
 from bl_context.cli import main
 
@@ -41,6 +47,26 @@ def test_dependency_execution_and_read_only_verification(tmp_path, monkeypatch):
     assert not Path('target').exists()
 
 
+def test_execution_observers_publish_each_step_in_order(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    steps = (FileStep('first', 'First'), FileStep('second', 'Second'))
+    events = []
+
+    run_checks(
+        steps,
+        install=True,
+        on_step_start=lambda step: events.append(("start", step.step_id)),
+        on_result=lambda result: events.append(("finish", result.step_id)),
+    )
+
+    assert events == [
+        ("start", "first"),
+        ("finish", "first"),
+        ("start", "second"),
+        ("finish", "second"),
+    ]
+
+
 def test_failed_prerequisite_blocks_install(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     steps = (Step('base', 'Base'), FileStep('target', 'Target', prerequisites=('base',)))
@@ -65,12 +91,13 @@ def test_structured_skip_and_full_readiness():
     assert is_ready(results)
     assert not is_ready(results, selected_step='data_directory')
     assert not is_ready(results[:-1])
-    step = STEPS[-1]
-    results[-1] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
-                             'Skipped (--no-history)')
+    index = next(i for i, item in enumerate(STEPS) if item.step_id == 'history_retrieval')
+    step = STEPS[index]
+    results[index] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
+                                'Skipped (--no-history)')
     assert not is_ready(results, no_history=True)
-    results[-1] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
-                             'Any human wording', skip_reason='no_history')
+    results[index] = CheckResult(step.step_id, step.label, CheckStatus.SKIPPED,
+                                'Any human wording', skip_reason='no_history')
     assert is_ready(results, no_history=True)
     assert not is_ready(results)
     results[0] = CheckResult('data_directory', 'Data', CheckStatus.SKIPPED,
@@ -119,7 +146,7 @@ class Remove(checks.Step):
 checks.STEPS = (OwnedFile("owner", "Owner"),
                 OwnedFile("fixture", "Fixture", prerequisites=("owner",)),
                 checks.Step("future", "Future"))
-cli.UNINSTALL_STEPS = (Remove("uninstall_codex", "Disconnect"),)
+checks.UNINSTALL_STEPS = (Remove("uninstall_codex", "Disconnect"),)
 cli.main()
 '''
 

@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass, replace
 from enum import Enum
 from time import monotonic
 
+from . import codex_hooks, codex_skills, embedding, mcp_registration, service, storage
+
 
 class CheckStatus(str, Enum):
     PASSED = "passed"
@@ -48,11 +50,9 @@ class Step:
 
 class DataDirectoryStep(Step):
     def install(self):
-        from . import storage
         storage.install()
 
     def verify(self):
-        from . import storage
         try:
             summary = storage.verify()
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, summary)
@@ -66,11 +66,9 @@ class DataDirectoryStep(Step):
 
 class BackgroundServiceStep(Step):
     def install(self):
-        from . import service
         service.install()
 
     def verify(self):
-        from . import service
         try:
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, service.verify())
         except Exception as exc:
@@ -81,11 +79,9 @@ class BackgroundServiceStep(Step):
 
 class CodexMcpStep(Step):
     def install(self):
-        from . import mcp_registration
         mcp_registration.install()
 
     def verify(self):
-        from . import mcp_registration
         try:
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, mcp_registration.verify())
         except Exception as exc:
@@ -94,11 +90,9 @@ class CodexMcpStep(Step):
 
 class CodexSkillsStep(Step):
     def install(self):
-        from . import codex_skills
         codex_skills.install()
 
     def verify(self):
-        from . import codex_skills
         try:
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_skills.verify())
         except Exception as exc:
@@ -106,13 +100,34 @@ class CodexSkillsStep(Step):
                                diagnostic=str(exc), remediation="Run blctx install codex --step codex_skills.")
 
 
+class EmbeddingModelStep(Step):
+    def install(self):
+        embedding.install()
+
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, embedding.verify()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                "Embedding model unavailable",
+                diagnostic=str(exc),
+                remediation=(
+                    "Run blctx install codex --step embedding_model; "
+                    "completed downloads are reused."
+                ),
+            )
+
+
 class CodexHooksStep(Step):
     def install(self):
-        from . import codex_hooks
         codex_hooks.install()
 
     def verify(self):
-        from . import codex_hooks
         try:
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_hooks.verify())
         except Exception as exc:
@@ -125,11 +140,6 @@ class UninstallStep(Step):
     purge: bool = False
 
     def install(self):
-        from . import storage
-        from . import service
-        from . import mcp_registration
-        from . import codex_skills
-        from . import codex_hooks
         codex_hooks.uninstall()
         codex_skills.uninstall()
         mcp_registration.uninstall()
@@ -137,7 +147,6 @@ class UninstallStep(Step):
         storage.uninstall(purge=self.purge)
 
     def verify(self):
-        from . import storage
         storage.verify_uninstalled()
         return CheckResult(self.step_id, self.label, CheckStatus.PASSED,
                            "Data installation disconnected." if not self.purge else "Owned data purged; unrelated files preserved.")
@@ -149,7 +158,9 @@ STEPS = (
     CodexMcpStep("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     CodexSkillsStep("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
     
-    Step("embedding_model", "Embedding model available", prerequisites=("data_directory",)),
+    EmbeddingModelStep(
+        "embedding_model", "Embedding model available", prerequisites=("data_directory",)
+    ),
     Step("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),
     Step("history_index", "Historical sessions indexed", history=True,
          prerequisites=("session_discovery", "embedding_model")),
@@ -165,7 +176,7 @@ UNINSTALL_STEPS = (
 )
 
 
-def _selection(steps, selected_step, install):
+def select_steps(steps, selected_step, install):
     by_id = {s.step_id: s for s in steps}
     if len(by_id) != len(steps):
         raise ValueError("Duplicate step IDs")
@@ -193,18 +204,28 @@ def _selection(steps, selected_step, install):
     return ordered
 
 
-def run_checks(steps=None, *, install=False, no_history=False, selected_step=None):
+def run_checks(
+    steps=None,
+    *,
+    install=False,
+    no_history=False,
+    selected_step=None,
+    on_step_start=None,
+    on_result=None,
+):
     """Install prerequisites first, then independently verify every executed step.
 
     Verification commands inspect only the selected step. Full reports preserve
     transcript order even when installation requires a different execution order.
     """
     steps = STEPS if steps is None else tuple(steps)
-    ordered = _selection(steps, selected_step, install)
+    ordered = select_steps(steps, selected_step, install)
     if selected_step and no_history and any(s.history for s in ordered):
         raise ValueError("--step requires history; cannot combine with --no-history")
     results = {}
     for step in ordered:
+        if on_step_start:
+            on_step_start(step)
         started = monotonic()
         if no_history and step.history:
             result = CheckResult(
@@ -237,6 +258,8 @@ def run_checks(steps=None, *, install=False, no_history=False, selected_step=Non
             result, duration=monotonic() - started,
             dependency=bool(selected_step and step.step_id != selected_step),
         )
+        if on_result:
+            on_result(results[step.step_id])
     display = ordered if selected_step else steps
     return [results[s.step_id] for s in display]
 
