@@ -249,6 +249,7 @@ def uninstall(purge=False):
             validate_database(paths, manifest['installation_id'])
         manifest['state'] = 'inactive'
         manifest.pop('embedding_model', None)
+        manifest.pop('session_discovery', None)
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)

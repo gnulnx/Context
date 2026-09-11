@@ -4,7 +4,15 @@ from dataclasses import asdict, dataclass, replace
 from enum import Enum
 from time import monotonic
 
-from . import codex_hooks, codex_skills, embedding, mcp_registration, service, storage
+from . import (
+    codex_hooks,
+    codex_skills,
+    discovery,
+    embedding,
+    mcp_registration,
+    service,
+    storage,
+)
 
 
 class CheckStatus(str, Enum):
@@ -123,6 +131,26 @@ class EmbeddingModelStep(Step):
             )
 
 
+class SessionDiscoveryStep(Step):
+    def install(self):
+        discovery.install()
+
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, discovery.verify()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                "Codex session discovery unavailable",
+                diagnostic=str(exc),
+                remediation="Run blctx install codex --step session_discovery.",
+            )
+
+
 class CodexHooksStep(Step):
     def install(self):
         codex_hooks.install()
@@ -161,7 +189,12 @@ STEPS = (
     EmbeddingModelStep(
         "embedding_model", "Embedding model available", prerequisites=("data_directory",)
     ),
-    Step("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),
+    SessionDiscoveryStep(
+        "session_discovery",
+        "Existing Codex sessions discovered",
+        history=True,
+        prerequisites=("data_directory",),
+    ),
     Step("history_index", "Historical sessions indexed", history=True,
          prerequisites=("session_discovery", "embedding_model")),
     Step("service_health", "Service healthy", prerequisites=("background_service", "embedding_model")),

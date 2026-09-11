@@ -21,8 +21,8 @@
    Model cache incomplete and HF_HUB_OFFLINE is set. Retry online to finish the download.
    Run blctx doctor for diagnostics.
 
- ✗ Existing Codex sessions discovered
-   Not implemented
+ ✓ Existing Codex sessions discovered
+   0 Codex sessions discovered; no sessions selected for indexing.
 
  ✗ Historical sessions indexed
    Prerequisites unavailable

@@ -80,6 +80,17 @@ Stable IDs, in display order: `data_directory`, `background_service`, `codex_mcp
 `codex_skills`, `embedding_model`, `session_discovery`, `history_index`,
 `service_health`, `mcp_health`, `history_retrieval`, `codex_hooks`.
 
+Codex session discovery is deliberately metadata-only. It counts regular
+`.jsonl` files below `$CODEX_HOME/sessions` and
+`$CODEX_HOME/archived_sessions` without opening or parsing transcripts, then
+records the five most recently modified paths for the later indexing step. It
+does not create an index or enqueue background work. Rerun it to refresh the
+snapshot:
+
+```console
+blctx install codex --step session_discovery
+```
+
 The data step has a real subprocess acceptance test covering install, status,
 doctor, uninstall, reinstall and purge. The execution foundation also retains
 a test-only file-backed fixture for generic dependency behavior.
