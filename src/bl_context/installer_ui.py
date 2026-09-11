@@ -2,6 +2,7 @@
 
 import time
 
+import click
 from rich.console import Group
 from rich.live import Live
 from rich.panel import Panel
@@ -63,40 +64,86 @@ class InstallerForm:
         self.live.stop()
         try:
             with self.console.screen():
-                self.console.print(self.render_hooks_consent())
-                while True:
-                    choice = self.console.input(
-                        "\n [bold green][Enter][/bold green] Enable automatic capture    "
-                        "[bold][S][/bold] Skip for now: "
-                    ).strip().lower()
-                    if choice == "":
-                        return True
-                    if choice == "s":
-                        return False
-                    self.console.print(" Please press Enter or S.", style="yellow")
+                selected = 0
+                with Live(
+                    self.render_hooks_consent(selected),
+                    console=self.console,
+                    auto_refresh=False,
+                    transient=False,
+                ) as selector:
+                    while True:
+                        key = click.getchar()
+                        left_key = next(
+                            (
+                                value
+                                for value in ("\x1b[D", "\x1bOD", "\xe0K")
+                                if key.startswith(value)
+                            ),
+                            None,
+                        )
+                        right_key = next(
+                            (
+                                value
+                                for value in ("\x1b[C", "\x1bOC", "\xe0M")
+                                if key.startswith(value)
+                            ),
+                            None,
+                        )
+                        if left_key:
+                            selected = 0
+                            key = key[len(left_key) :]
+                        elif right_key:
+                            selected = 1
+                            key = key[len(right_key) :]
+                        if key in ("\r", "\n"):
+                            return selected == 0
+                        selector.update(
+                            self.render_hooks_consent(selected), refresh=True
+                        )
         finally:
             self.live.start(refresh=True)
 
-    def render_hooks_consent(self):
+    def render_hooks_consent(self, selected=0):
         body = Text.from_markup(
-            "Hooks let Context notice when a Codex session starts, completes a turn, "
-            "or closes. This keeps new work available without requiring manual saves.\n\n"
-            "[bold]Context will register one local handler for three events:[/bold]\n"
-            "  Session start   Connect the conversation to Context\n"
-            "  Turn complete   Index newly completed work\n"
-            "  Session end     Perform a final catch-up\n\n"
+            "Hooks keep new Codex work available without requiring manual saves.\n\n"
+            "[bold]What is installed[/bold]\n"
+            "  One local handler for session start, turn complete, and session end.\n\n"
             "[bold yellow]Security[/bold yellow]\n"
             "  • Hooks can run outside the Codex sandbox.\n"
-            "  • Context can access the current transcript and working directory.\n"
-            "  • Information is indexed into private local Context storage.\n"
-            "  • Codex will separately ask you to review and trust the commands.\n\n"
-            "[bold]If you skip[/bold]\n"
-            "Search, historical memory, MCP retrieval, and manual save or tag commands "
-            "still work. New conversations will not be captured automatically."
+            "  • Context can read the current transcript and working directory.\n"
+            "  • Information is indexed into private local storage.\n"
+            "  • Codex separately asks you to review and trust the handler."
         )
+        choices = Text(justify="center")
+        choices.append(
+            " ▶ Enable automatic capture "
+            if selected == 0
+            else "   Enable automatic capture ",
+            style="bold white on green" if selected == 0 else "dim",
+        )
+        choices.append("      ")
+        choices.append(
+            " ▶ Skip for now " if selected == 1 else "   Skip for now ",
+            style="bold black on yellow" if selected == 1 else "dim",
+        )
+        if selected == 0:
+            feedback = Text.from_markup(
+                "[bold green]Selected: Enable automatic capture.[/bold green] Installs "
+                "the handler; Codex asks for separate trust on its next launch."
+            )
+        else:
+            feedback = Text.from_markup(
+                "[bold yellow]Selected: Skip for now.[/bold yellow] No hooks or automatic "
+                "capture; search, retrieval, and manual saves still work."
+            )
         return Group(
             Text("\n Base Layer Context - Automatic Codex capture\n", style="bold"),
-            Panel(body, border_style="cyan", padding=(1, 2)),
+            Panel(body, border_style="cyan", padding=(0, 2)),
+            Text("\n Choose an option", style="bold"),
+            choices,
+            Text("\n"),
+            Text.assemble(" ", feedback),
+            Text("\n  ←/→ Change selection    [Enter] Confirm", style="bold cyan"),
         )
 
     def render(self):

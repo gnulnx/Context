@@ -239,9 +239,9 @@ class CodexHooksStep(Step):
         if codex_hooks.skipped():
             return CheckResult(
                 self.step_id,
-                self.label,
+                "Codex hooks install skipped",
                 CheckStatus.SKIPPED,
-                "Skipped; automatic capture remains disabled.",
+                "Automatic capture remains disabled.",
                 skip_reason="optional",
             )
         try:
