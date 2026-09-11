@@ -10,9 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 
 import pytest
+from click.testing import CliRunner
 from test_index import source
 
 from bl_context import capture, codex_hooks, storage
+from bl_context.cli import main
 from bl_context.codex_probe import query
 from bl_context.index import Index
 
@@ -65,7 +67,7 @@ def test_handler_bounds_and_invalid_input(tmp_path):
         assert time.monotonic()-start < 1
 
 
-def test_hooks_preserve_unrelated_config_and_edits(tmp_path):
+def test_hooks_preserve_unrelated_config_and_remove_owned_edits(tmp_path):
     storage.install()
     path = codex_hooks.root()/'hooks.json'
     path.parent.mkdir(parents=True)
@@ -78,12 +80,63 @@ def test_hooks_preserve_unrelated_config_and_edits(tmp_path):
     doc = codex_hooks.read(path)
     doc['hooks']['Stop'][-1]['hooks'][0]['command'] += ' --user-edit'
     path.write_text(json.dumps(doc))
-    with pytest.raises(RuntimeError,match='modified'):
-        codex_hooks.uninstall()
-    assert codex_hooks.read(path) == doc
-    path.write_text(json.dumps(before))
     codex_hooks.uninstall()
     assert codex_hooks.read(path) == unrelated
+
+
+def test_uninstall_removes_only_this_installations_modified_hooks():
+    storage.install()
+    codex_hooks.install()
+    path = codex_hooks.root() / 'hooks.json'
+    document = codex_hooks.read(path)
+    context_group = document['hooks']['Stop'][-1]
+    context_group['hooks'][0]['command'] += ' --locally-modified'
+    document['hooks']['Stop'].append(
+        {
+            'hooks': [
+                {
+                    'type': 'command',
+                    'command': (
+                        'python -m bl_context.hook_handler '
+                        '--installation-id another-installation'
+                    ),
+                }
+            ]
+        }
+    )
+    path.write_text(json.dumps(document))
+
+    codex_hooks.uninstall()
+
+    remaining = json.dumps(codex_hooks.read(path))
+    assert '--locally-modified' not in remaining
+    assert '--installation-id another-installation' in remaining
+    assert not storage.read_manifest(storage.locations()).get('codex_hooks')
+
+
+def test_skipping_hooks_removes_owned_registration_and_persists_choice():
+    storage.install()
+    codex_hooks.install()
+
+    codex_hooks.skip()
+
+    assert codex_hooks.skipped()
+    assert not codex_hooks.registered()
+    assert 'bl_context.hook_handler' not in json.dumps(
+        codex_hooks.read(codex_hooks.root() / 'hooks.json')
+    )
+
+
+def test_uninstall_command_removes_current_hooks_without_prompting():
+    storage.install()
+    codex_hooks.install()
+    path = codex_hooks.root() / 'hooks.json'
+
+    result = CliRunner().invoke(main, ['uninstall', 'codex', '--json'])
+
+    assert result.exit_code == 0
+    assert 'bl_context.hook_handler' not in json.dumps(codex_hooks.read(path))
+    assert not storage.read_manifest(storage.locations()).get('codex_hooks')
 
 
 def test_fast_ack_while_embedding_worker_is_busy():

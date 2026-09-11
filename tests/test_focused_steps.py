@@ -104,6 +104,48 @@ def test_structured_skip_and_full_readiness():
                             'Skipped (--no-history)', skip_reason='no_history')
     assert not is_ready(results, no_history=True)
 
+    results = [CheckResult(s.step_id, s.label, CheckStatus.PASSED, 'OK') for s in STEPS]
+    hooks_index = next(
+        i for i, item in enumerate(STEPS) if item.step_id == 'codex_hooks'
+    )
+    hooks = STEPS[hooks_index]
+    results[hooks_index] = CheckResult(
+        hooks.step_id, hooks.label, CheckStatus.SKIPPED,
+        'Skipped by choice', skip_reason='optional',
+    )
+    assert is_ready(results)
+
+
+def test_optional_skip_allows_dependent_step(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    events = []
+
+    class OptionalStep(Step):
+        def skip(self):
+            events.append('skipped')
+
+        def verify(self):
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.SKIPPED,
+                'Skipped', skip_reason='optional',
+            )
+
+    steps = (
+        OptionalStep('optional', 'Optional', optional=True),
+        FileStep('final', 'Final', prerequisites=('optional',)),
+    )
+    results = run_checks(
+        steps,
+        install=True,
+        should_install=lambda step: step.step_id != 'optional',
+    )
+
+    assert events == ['skipped']
+    assert [result.status for result in results] == [
+        CheckStatus.SKIPPED,
+        CheckStatus.PASSED,
+    ]
+
 
 @pytest.mark.parametrize('command', [['install', 'codex'], ['status'], ['doctor']])
 def test_usage_and_output_options(command):

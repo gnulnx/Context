@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import replace
 
-from . import checks, embedding, storage
+from . import checks, codex_hooks, embedding, storage
 
 CODEX_PROVIDER = "openai/codex"
 
@@ -42,11 +42,21 @@ class CodexInstallerAdapter(InstallerAdapter):
         This method is intentionally the only mutation path used by Codex install.
         Status and doctor call ``verify``; uninstall has its own explicit path.
         """
+        choose_hooks = observers.pop("choose_hooks", None)
+
+        def should_install(step):
+            if step.step_id != "codex_hooks":
+                return True
+            if codex_hooks.registered():
+                return True
+            return choose_hooks() if choose_hooks else False
+
         return checks.run_checks(
             checks.STEPS,
             install=True,
             no_history=no_history,
             selected_step=selected_step,
+            should_install=should_install,
             **observers,
         )
 

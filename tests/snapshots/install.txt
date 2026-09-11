@@ -1,6 +1,5 @@
 
- Base Layer Context
- Persistent context for coding agents
+ Base Layer Context - Persistent memory for coding agents
 
  Checking cached model…
  ✓ Data directory initialized
@@ -37,6 +36,9 @@
    Prerequisites unavailable
 
  ✗ Codex hooks installed
+   Prerequisites unavailable
+
+ ✗ Finalizing installation
    Prerequisites unavailable
 
  Not ready.

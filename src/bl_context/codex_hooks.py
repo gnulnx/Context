@@ -52,16 +52,50 @@ def entries(paths, manifest, generation):
     return {event:{'hooks':[{'type':'command','command':command,'timeout':2}]} for event in capture.EVENTS}
 
 
+def command_installation_id(command):
+    try:
+        tokens = shlex.split(command)
+    except (TypeError, ValueError):
+        return None
+    if 'bl_context.hook_handler' not in tokens:
+        return None
+    for index, token in enumerate(tokens[:-1]):
+        if token == '--installation-id':
+            return tokens[index + 1]
+    return None
+
+
 def remove_owned(document, owned):
-    for event, entry in owned['entries'].items():
-        groups = document.get('hooks',{}).get(event,[])
-        if entry in groups:
-            groups.remove(entry)
-            if not groups:
-                document['hooks'].pop(event)
-        elif any('bl_context.hook_handler' in json.dumps(group) for group in groups):
-            raise RuntimeError('Owned Context hook was modified; preserving it')
+    command = owned['entries']['SessionStart']['hooks'][0]['command']
+    installation_id = command_installation_id(command)
+    if not installation_id:
+        raise RuntimeError('Invalid owned Context hook registration')
+    for event, groups in list(document.get('hooks', {}).items()):
+        for group in list(groups):
+            handlers = group.get('hooks', [])
+            for handler in list(handlers):
+                if command_installation_id(handler.get('command')) == installation_id:
+                    handlers.remove(handler)
+            if not handlers:
+                groups.remove(group)
+        if not groups:
+            document['hooks'].pop(event)
     return document
+
+
+def registered():
+    paths = storage.locations()
+    path = storage.manifest_path(paths)
+    return path.exists() and bool(storage.read_manifest(paths).get('codex_hooks'))
+
+
+def skipped():
+    paths = storage.locations()
+    path = storage.manifest_path(paths)
+    return (
+        path.exists()
+        and storage.read_manifest(paths).get('codex_hooks_state') == 'skipped'
+    )
 
 
 def install():
@@ -92,6 +126,7 @@ def install():
                 db.execute('UPDATE capture_bindings SET transcript=NULL,signature=NULL,indexed_at=NULL,error=NULL')
         write(path,document)
         manifest['codex_hooks'] = {'root':str(directory),'path':str(path),'entries':expected,'generation':generation}
+        manifest.pop('codex_hooks_state', None)
         storage.atomic_manifest(paths,manifest)
     # Trust must be granted by the engineer in Codex /hooks, never by the installer.
 
@@ -134,6 +169,8 @@ def uninstall():
         manifest = storage.read_manifest(paths)
         owned = manifest.get('codex_hooks')
         if not owned:
+            if manifest.pop('codex_hooks_state', None) is not None:
+                storage.atomic_manifest(paths, manifest)
             return
         path = Path(owned['path'])
         if path != Path(owned['root'])/'hooks.json':
@@ -142,8 +179,18 @@ def uninstall():
         if path.exists():
             write(path,document)
         manifest.pop('codex_hooks')
+        manifest.pop('codex_hooks_state', None)
         storage.atomic_manifest(paths,manifest)
         with closing(capture.connect(paths)) as db, db:
             db.executescript(capture.SCHEMA)
             db.execute('UPDATE capture_bindings SET transcript=NULL,signature=NULL,indexed_at=NULL,error=NULL')
             db.execute('DELETE FROM capture_events')
+
+
+def skip():
+    uninstall()
+    paths = storage.locations()
+    with storage.locked(paths):
+        manifest = storage.read_manifest(paths)
+        manifest['codex_hooks_state'] = 'skipped'
+        storage.atomic_manifest(paths, manifest)

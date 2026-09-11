@@ -250,6 +250,7 @@ def uninstall(purge=False):
         manifest['state'] = 'inactive'
         manifest.pop('embedding_model', None)
         manifest.pop('session_discovery', None)
+        manifest.pop('installation_finalized', None)
         atomic_manifest(paths, manifest)
         if purge:
             purge_index_artifacts(paths, manifest)

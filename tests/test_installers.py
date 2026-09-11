@@ -4,7 +4,7 @@ from io import StringIO
 import pytest
 from rich.console import Console
 
-from bl_context import checks
+from bl_context import checks, storage
 from bl_context.installer_ui import InstallerForm
 from bl_context.installers import (
     CODEX_PROVIDER,
@@ -99,3 +99,43 @@ def test_live_form_shows_history_index_failure_details():
     rendered = output.getvalue()
     assert "Indexer connection timed out" in rendered
     assert "Retry the history index step." in rendered
+
+
+def test_hooks_consent_screen_explains_security_and_skipping():
+    output = StringIO()
+    console = Console(file=output, width=100, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+
+    console.print(form.render_hooks_consent())
+
+    rendered = output.getvalue()
+    assert "one local handler for three events" in rendered
+    assert "outside the Codex sandbox" in rendered
+    assert "If you skip" in rendered
+    assert "Show technical details" not in rendered
+
+
+def test_codex_install_uses_hook_choice(monkeypatch):
+    adapter = CodexInstallerAdapter()
+    seen = []
+
+    monkeypatch.setattr(checks, "run_checks", lambda *args, **kwargs: kwargs)
+    monkeypatch.setattr("bl_context.installers.codex_hooks.registered", lambda: False)
+
+    arguments = adapter.install(choose_hooks=lambda: seen.append("asked") or False)
+
+    hook = next(step for step in checks.STEPS if step.step_id == "codex_hooks")
+    assert arguments["should_install"](hook) is False
+    assert seen == ["asked"]
+
+
+def test_finalizing_waits_and_records_completion(monkeypatch):
+    storage.install()
+    waits = []
+    monkeypatch.setattr(checks, "sleep", waits.append)
+    step = next(step for step in checks.STEPS if step.step_id == "finalizing")
+
+    step.install()
+
+    assert waits == [2.5]
+    assert step.verify().status == checks.CheckStatus.PASSED

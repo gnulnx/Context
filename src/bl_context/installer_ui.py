@@ -4,6 +4,7 @@ import time
 
 from rich.console import Group
 from rich.live import Live
+from rich.panel import Panel
 from rich.progress import ProgressBar, Spinner
 from rich.table import Table
 from rich.text import Text
@@ -57,6 +58,46 @@ class InstallerForm:
         self.progress_started.setdefault("history_index", time.monotonic())
         self.history_index_progress = (stage, completed, total)
         self.live.update(self.render(), refresh=True)
+
+    def choose_hooks(self):
+        self.live.stop()
+        try:
+            with self.console.screen():
+                self.console.print(self.render_hooks_consent())
+                while True:
+                    choice = self.console.input(
+                        "\n [bold green][Enter][/bold green] Enable automatic capture    "
+                        "[bold][S][/bold] Skip for now: "
+                    ).strip().lower()
+                    if choice == "":
+                        return True
+                    if choice == "s":
+                        return False
+                    self.console.print(" Please press Enter or S.", style="yellow")
+        finally:
+            self.live.start(refresh=True)
+
+    def render_hooks_consent(self):
+        body = Text.from_markup(
+            "Hooks let Context notice when a Codex session starts, completes a turn, "
+            "or closes. This keeps new work available without requiring manual saves.\n\n"
+            "[bold]Context will register one local handler for three events:[/bold]\n"
+            "  Session start   Connect the conversation to Context\n"
+            "  Turn complete   Index newly completed work\n"
+            "  Session end     Perform a final catch-up\n\n"
+            "[bold yellow]Security[/bold yellow]\n"
+            "  • Hooks can run outside the Codex sandbox.\n"
+            "  • Context can access the current transcript and working directory.\n"
+            "  • Information is indexed into private local Context storage.\n"
+            "  • Codex will separately ask you to review and trust the commands.\n\n"
+            "[bold]If you skip[/bold]\n"
+            "Search, historical memory, MCP retrieval, and manual save or tag commands "
+            "still work. New conversations will not be captured automatically."
+        )
+        return Group(
+            Text("\n Base Layer Context - Automatic Codex capture\n", style="bold"),
+            Panel(body, border_style="cyan", padding=(1, 2)),
+        )
 
     def render(self):
         table = Table.grid(padding=(0, 1), expand=True)
