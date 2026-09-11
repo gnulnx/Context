@@ -247,6 +247,48 @@ def test_complete_installer_uses_compact_layout_at_80_by_24():
     assert len(rendered.splitlines()) <= 24
 
 
+def test_completed_installer_makes_failure_state_explicit():
+    output = StringIO()
+    console = Console(file=output, width=160, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    for step in checks.STEPS:
+        status = (
+            checks.CheckStatus.FAILED
+            if step.step_id == "history_index"
+            else checks.CheckStatus.PASSED
+        )
+        form.results[step.step_id] = checks.CheckResult(
+            step.step_id, step.label, status, "Result"
+        )
+
+    console.print(form.render())
+
+    assert "Failed checks require attention." in output.getvalue()
+
+
+def test_full_screen_installer_reprints_final_state_after_live_screen_closes(
+    monkeypatch,
+):
+    output = StringIO()
+    console = Console(file=output, width=160, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS, full_screen=True)
+    form.results["history_index"] = checks.CheckResult(
+        "history_index",
+        "Historical sessions indexed",
+        checks.CheckStatus.FAILED,
+        "Recent Codex history is not indexed",
+    )
+    events = []
+    monkeypatch.setattr(form.live, "refresh", lambda: events.append("refresh"))
+    monkeypatch.setattr(form.live, "stop", lambda: events.append("stop"))
+
+    form.__exit__(None, None, None)
+
+    assert events == ["refresh", "stop"]
+    assert "Historical sessions indexed" in output.getvalue()
+    assert "Recent Codex history is not indexed" in output.getvalue()
+
+
 @pytest.mark.parametrize(
     ("keys", "expected"),
     [

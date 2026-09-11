@@ -95,6 +95,31 @@ def test_install_reuses_a_valid_indexed_prefix(monkeypatch, tmp_path):
     assert requests == [{"operation": "index_status"}]
 
 
+def test_install_indexes_an_existing_session_missing_from_the_index(monkeypatch, tmp_path):
+    path = tmp_path / "recent.jsonl"
+    path.write_text("session history\n")
+    selected = [{"path": str(path), "size": path.stat().st_size}]
+    requests = []
+
+    def call(request):
+        requests.append(request)
+        if request == {"operation": "index_status"}:
+            return {"sources": []}
+        if request["operation"] == "index":
+            return {"job_id": "job-1", "state": "queued"}
+        return {
+            "state": "complete",
+            "result": {"files": selected, "failed": []},
+        }
+
+    monkeypatch.setattr(history_index.discovery, "selected_sessions", lambda: selected)
+    monkeypatch.setattr(history_index, "call", call)
+
+    history_index.install()
+
+    assert {"operation": "index", "sources": [str(path)]} in requests
+
+
 def test_verify_accepts_append_only_growth_after_discovery(monkeypatch, tmp_path):
     path = tmp_path / "recent.jsonl"
     path.write_text("history\n")

@@ -90,7 +90,9 @@ def install():
 
 
 def source_is_valid(snapshot, source):
-    source_report = source.get("report") if source else None
+    if not isinstance(source, dict):
+        return False
+    source_report = source.get("report")
     try:
         path = Path(snapshot["path"])
         path_info = path.stat(follow_symlinks=False)
