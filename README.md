@@ -181,4 +181,4 @@ Context enforces strict file permission boundaries:
 
 ## License
 
-MIT © [Base Layer Context Contributors](https://github.com/gnulnx/Context)
+[MIT License](LICENSE) © 2026 John Furr
