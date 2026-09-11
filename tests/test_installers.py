@@ -174,8 +174,27 @@ def test_skipped_hooks_use_an_unambiguous_result_label(monkeypatch):
     result = step.verify()
 
     assert result.status == checks.CheckStatus.SKIPPED
-    assert result.label == "Codex hooks install skipped"
+    assert result.label == "Codex hooks skipped"
     assert result.summary == "Automatic capture remains disabled."
+
+
+def test_live_form_renders_skipped_hooks_result_label():
+    output = StringIO()
+    console = Console(file=output, width=160, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    form.results["codex_hooks"] = checks.CheckResult(
+        "codex_hooks",
+        "Codex hooks skipped",
+        checks.CheckStatus.SKIPPED,
+        "Automatic capture remains disabled.",
+        skip_reason="optional",
+    )
+
+    console.print(form.render())
+
+    rendered = output.getvalue()
+    assert "–  Codex hooks skipped" in rendered
+    assert "Automatic capture remains disabled." in rendered
 
 
 def test_finalizing_waits_and_records_completion(monkeypatch):

@@ -178,7 +178,11 @@ class InstallerForm:
                         for value in (detail, result.diagnostic, result.remediation)
                         if value
                     )
-                table.add_row(Text(symbol, style=style), Text(step.label, style=style), detail)
+                table.add_row(
+                    Text(symbol, style=style),
+                    Text(result.label, style=style),
+                    detail,
+                )
             elif self.active_step == step.step_id:
                 detail = ""
                 if step.step_id == "embedding_model" and self.embedding_progress:
