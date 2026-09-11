@@ -67,6 +67,7 @@ class InstallerForm:
         self.embedding_progress = None
         self.history_index_progress = None
         self.progress_started = {}
+        self.step_spinner = Spinner("dots", style="cyan")
         self.current_page = "installer"
         self.hooks_selected = 0
         self.live = Live(
@@ -326,7 +327,7 @@ class InstallerForm:
                     detail = self.render_embedding_progress()
                 elif step.step_id == "history_index" and self.history_index_progress:
                     detail = self.render_history_index_progress()
-                row = [Spinner("dots", style="cyan"), Text(step.label, style="cyan")]
+                row = [self.step_spinner, Text(step.label, style="cyan")]
                 if show_details:
                     row.append(detail)
                 table.add_row(*row)
