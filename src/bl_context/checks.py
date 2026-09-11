@@ -9,6 +9,7 @@ from . import (
     codex_skills,
     discovery,
     embedding,
+    history_index,
     mcp_registration,
     service,
     storage,
@@ -151,6 +152,26 @@ class SessionDiscoveryStep(Step):
             )
 
 
+class HistoryIndexStep(Step):
+    def install(self):
+        history_index.install()
+
+    def verify(self):
+        try:
+            return CheckResult(
+                self.step_id, self.label, CheckStatus.PASSED, history_index.verify()
+            )
+        except Exception as exc:
+            return CheckResult(
+                self.step_id,
+                self.label,
+                CheckStatus.FAILED,
+                "Recent Codex history is not indexed",
+                diagnostic=str(exc),
+                remediation="Run blctx install codex --step history_index.",
+            )
+
+
 class CodexHooksStep(Step):
     def install(self):
         codex_hooks.install()
@@ -195,8 +216,12 @@ STEPS = (
         history=True,
         prerequisites=("data_directory",),
     ),
-    Step("history_index", "Historical sessions indexed", history=True,
-         prerequisites=("session_discovery", "embedding_model")),
+    HistoryIndexStep(
+        "history_index",
+        "Historical sessions indexed",
+        history=True,
+        prerequisites=("background_service", "session_discovery", "embedding_model"),
+    ),
     Step("service_health", "Service healthy", prerequisites=("background_service", "embedding_model")),
     Step("mcp_health", "MCP connection healthy", prerequisites=("codex_mcp", "service_health")),
     Step("history_retrieval", "Historical memory retrieval verified", history=True,

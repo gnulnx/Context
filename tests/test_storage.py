@@ -180,6 +180,28 @@ def test_relative_xdg_uses_home(tmp_path, monkeypatch):
     assert storage.locations()['data'] == tmp_path / '.local/share/bl-context'
 
 
+def test_explicit_disconnect_supersedes_pending_index_jobs():
+    storage.install()
+    paths = storage.locations()
+    with sqlite3.connect(storage.database_path(paths)) as db:
+        db.execute(
+            "CREATE TABLE ingest_jobs (id TEXT PRIMARY KEY, state TEXT NOT NULL)"
+        )
+        db.executemany(
+            "INSERT INTO ingest_jobs VALUES (?, ?)",
+            [("queued", "queued"), ("running", "running"), ("done", "complete")],
+        )
+
+    assert storage.cancel_pending_index_jobs(paths) == 2
+
+    with sqlite3.connect(storage.database_path(paths)) as db:
+        assert dict(db.execute("SELECT id, state FROM ingest_jobs")) == {
+            "queued": "superseded",
+            "running": "superseded",
+            "done": "complete",
+        }
+
+
 def test_schema_publication_failure_is_atomic(tmp_path, monkeypatch):
     original = os.link
     def fail(*args):

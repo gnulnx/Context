@@ -151,6 +151,7 @@ def uninstall():
     manifest = storage.read_manifest(paths)
     unit = paths['config'] / unit_name(manifest)
     if 'service_unit' not in manifest:
+        storage.cancel_pending_index_jobs(paths)
         return
     if manifest['service_unit'] != str(unit):
         raise RuntimeError('Invalid service ownership')
@@ -178,5 +179,6 @@ def uninstall():
     manager('daemon-reload')
     if manager('show', unit.name, '--property=LoadState', '--value') != 'not-found':
         raise RuntimeError('Service registration remains after uninstall')
+    storage.cancel_pending_index_jobs(paths)
     manifest.pop('service_unit')
     storage.atomic_manifest(paths, manifest)

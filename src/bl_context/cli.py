@@ -9,6 +9,7 @@ from rich.console import Console
 from .checks import CheckStatus, checks_succeeded, is_ready
 from .embedding import progress
 from .explore import explore
+from .history_index import progress as history_progress
 from .installer_ui import InstallerForm
 from .installers import CODEX_PROVIDER, installer_for
 from .retrieval_cli import context, index_command, index_status, recent, search
@@ -56,14 +57,18 @@ def report(
                 show_diagnostics=command == "doctor",
             )
             progress_context = progress(callback=live_form.update_embedding)
+            history_progress_context = history_progress(
+                callback=live_form.update_history_index
+            )
             observers = {
                 "on_step_start": live_form.start_step,
                 "on_result": live_form.finish_step,
             }
         else:
             progress_context = progress(console)
+            history_progress_context = history_progress()
             observers = {}
-        with live_form or nullcontext(), progress_context:
+        with live_form or nullcontext(), progress_context, history_progress_context:
             if command == "install":
                 results = adapter.install(
                     no_history=no_history, selected_step=step, **observers
@@ -100,8 +105,9 @@ def report(
             if result.dependency:
                 console.print("   Prerequisite for selected step.\n")
             if command == "doctor" or (
-                result.step_id == "embedding_model"
+                result.step_id in ("embedding_model", "history_index")
                 and result.status == CheckStatus.FAILED
+                and result.summary != "Prerequisites unavailable"
             ):
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
     if not json_output:
