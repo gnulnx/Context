@@ -150,6 +150,11 @@ def uninstall():
             raise RuntimeError('Refusing to remove a modified service unit')
     if manager('show', unit.name, '--property=LoadState', '--value') != 'not-found':
         manager('stop', unit.name)
+    if not unit.exists():
+        # systemctl disable needs the definition to remove its enablement links.
+        # Restore only this manifest-owned unit, without replacing any new file.
+        with os.fdopen(os.open(unit, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), 'w') as stream:
+            stream.write(unit_text(paths, manifest))
     manager('disable', unit.name)
     endpoint = paths['state'] / 'daemon.sock'
     if endpoint.exists():

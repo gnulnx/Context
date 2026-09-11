@@ -83,7 +83,7 @@ By default, `pytest` uses isolated storage and simulated service managers. The p
 | Debian 12 (bookworm), amd64 and arm64 | Debian's Python 3.11 | Built wheel, full default suite and real CPU embeddings, as an unprivileged user |
 | Debian 13 (trixie), amd64 and arm64 | Debian's Python 3.13 | Built wheel, full default suite and real CPU embeddings, as an unprivileged user |
 
-The ARM64 jobs use native ARM64 runners. Debian jobs use Debian containers on those Linux runners: they exercise Debian's Python and libraries, but share the Ubuntu host kernel and do not run a systemd user manager. A Debian machine still needs a working `systemctl --user` session for onboarding. Testing boot/login behavior on Debian machines is separate from these container checks. Python prereleases and free-threaded builds are not part of the supported test matrix.
+The ARM64 jobs use native ARM64 runners. Debian jobs use Debian containers on those Linux runners: they exercise Debian's Python and libraries, but share the Ubuntu host kernel and do not run a systemd user manager. A Debian machine still needs a working `systemctl --user` session for onboarding. [Issue #45](https://github.com/gnulnx/Context/issues/45) tracks Debian machine-level lifecycle and headless robot startup acceptance. Python prereleases and free-threaded builds are not part of the supported test matrix.
 
 To run live user-service tests or download real embedding models:
 
