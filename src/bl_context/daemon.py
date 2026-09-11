@@ -69,11 +69,33 @@ def main():
                     request = json.loads(buffer)
                     if not isinstance(request, dict):
                         raise ValueError('Expected JSON object')
-                    with engine_lock:
-                        if engine is None:
-                            engine = Index(paths)
-                    response = engine.submit(request, defer_index=True)
-                    dispatch_job = response.pop('_dispatch_job', None)
+                    if request.get('operation') == 'health':
+                        storage.verify()
+                        with closing(sqlite3.connect(storage.database_path(paths))) as db:
+                            initialized = db.execute(
+                                "SELECT 1 FROM sqlite_master "
+                                "WHERE type='table' AND name='ingest_jobs'"
+                            ).fetchone()
+                            running = (
+                                db.execute(
+                                    "SELECT count(*) FROM ingest_jobs "
+                                    "WHERE state IN ('queued','running')"
+                                ).fetchone()[0]
+                                if initialized
+                                else 0
+                            )
+                        response = {
+                            'status': 'ok',
+                            'installation_id': args.installation_id,
+                            'schema_version': storage.VERSION,
+                            'running_jobs': running,
+                        }
+                    else:
+                        with engine_lock:
+                            if engine is None:
+                                engine = Index(paths)
+                        response = engine.submit(request, defer_index=True)
+                        dispatch_job = response.pop('_dispatch_job', None)
             except Exception as exc:
                 response = {'error': str(exc) or type(exc).__name__}
             try:

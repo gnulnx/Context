@@ -1,9 +1,13 @@
 """Owned Codex registration using the supported CLI; preserve unrelated config."""
+import asyncio
 import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 try:
     import tomllib
@@ -12,6 +16,14 @@ except ImportError:
 from . import storage
 
 NAME = 'base-layer-context'
+TOOLS = {
+    'recent_context',
+    'search_context',
+    'get_context',
+    'context_status',
+    'open_session',
+    'log_update',
+}
 
 
 def root():
@@ -96,6 +108,61 @@ def verify():
     if not result.get('enabled') or transport.get('type') != 'stdio' or any(transport.get(k) != v for k,v in target.items()):
         raise RuntimeError('Codex effective registration is disabled or has the wrong executable/environment')
     return 'Owned Codex MCP registration and absolute executable verified.'
+
+
+async def probe_tool(configuration, name, arguments, error_log):
+    parameters = StdioServerParameters(
+        command=configuration['command'],
+        args=configuration['args'],
+        env={**os.environ, **configuration['env']},
+    )
+    async with stdio_client(parameters, errlog=error_log) as (read, write):
+        async with ClientSession(read, write) as client:
+            await client.initialize()
+            listing = await client.list_tools()
+            names = {tool.name for tool in listing.tools}
+            if names != TOOLS:
+                raise RuntimeError(
+                    f'MCP tool contract mismatch: expected {sorted(TOOLS)}, got {sorted(names)}'
+                )
+            response = await client.call_tool(name, arguments)
+            if response.isError or not isinstance(response.structuredContent, dict):
+                detail = 'MCP tool returned an error'
+                if response.content:
+                    detail = getattr(response.content[0], 'text', detail)
+                raise RuntimeError(detail)
+            return response.structuredContent
+
+
+def call_tool(name, arguments=None):
+    storage.verify()
+    paths = storage.locations()
+    manifest = storage.read_manifest(paths)
+    configuration = expected(paths, manifest)
+    with open(os.devnull, 'w', encoding='utf-8') as error_log:
+        try:
+            return asyncio.run(
+                asyncio.wait_for(
+                    probe_tool(configuration, name, arguments or {}, error_log), 20
+                )
+            )
+        except asyncio.TimeoutError as exc:
+            raise RuntimeError('MCP stdio health check timed out after 20 seconds') from exc
+
+
+def health():
+    verify()
+    status = call_tool('context_status')
+    if (
+        not isinstance(status.get('sources'), list)
+        or type(status.get('messages')) is not int
+        or type(status.get('chunks')) is not int
+    ):
+        raise RuntimeError('MCP context_status returned an invalid payload')
+    return (
+        f'MCP stdio initialized, {len(TOOLS)} tools verified, and daemon round-trip '
+        f'completed ({status["messages"]} messages).'
+    )
 
 
 def uninstall():
