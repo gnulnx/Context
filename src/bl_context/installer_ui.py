@@ -101,7 +101,7 @@ class InstallerForm:
             else:
                 table.add_row(Text("○", style="dim"), Text(step.label, style="dim"), "")
         return Group(
-            Text("\n Base Layer Context\n Persistent context for coding agents\n"),
+            Text("\n Base Layer Context - Persistent memory for coding agents\n"),
             table,
         )
 

@@ -47,7 +47,7 @@ def report(
     console = None if json_output else Console(no_color=no_color, highlight=False)
     live_form = None
     if console is not None and not console.is_terminal:
-        console.print("\n Base Layer Context\n Persistent context for coding agents\n")
+        console.print("\n Base Layer Context - Persistent memory for coding agents\n")
     try:
         adapter = installer_for(provider)
         if console is not None and console.is_terminal:
