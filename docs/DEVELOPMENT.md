@@ -74,7 +74,18 @@ blctx status --no-history
 
 ## 4. Full Integration & System Acceptance Tests
 
-By default, `pytest` uses isolated storage and simulated service managers. The package workflow builds, lints, and tests the installed wheel on Linux and macOS. To run live user-service tests or download real embedding models:
+By default, `pytest` uses isolated storage and simulated service managers. The package workflow tests these environments on every pull request and push to `main`:
+
+| Environment | Python versions | Coverage |
+| --- | --- | --- |
+| Ubuntu 24.04, x86_64 and ARM64 | 3.10, 3.11, 3.12, 3.13, 3.14 | Built wheel, full default suite; real systemd lifecycle and CPU embeddings on 3.13 |
+| macOS, Apple Silicon (`macos-latest`) | 3.10, 3.11, 3.12, 3.13, 3.14 | Built wheel, full default suite, real LaunchAgent lifecycle |
+| Debian 12 (bookworm), amd64 and arm64 | Debian's Python 3.11 | Built wheel, full default suite and real CPU embeddings, as an unprivileged user |
+| Debian 13 (trixie), amd64 and arm64 | Debian's Python 3.13 | Built wheel, full default suite and real CPU embeddings, as an unprivileged user |
+
+The ARM64 jobs use native ARM64 runners. Debian jobs use Debian containers on those Linux runners: they exercise Debian's Python and libraries, but share the Ubuntu host kernel and do not run a systemd user manager. A Debian machine still needs a working `systemctl --user` session for onboarding. [Issue #45](https://github.com/gnulnx/Context/issues/45) tracks Debian machine-level lifecycle and headless robot startup acceptance. Python prereleases and free-threaded builds are not part of the supported test matrix.
+
+To run live user-service tests or download real embedding models:
 
 ```bash
 # Run unit tests only

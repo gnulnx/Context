@@ -128,6 +128,43 @@ def test_service_unit_uses_absolute_paths_and_bounded_lifecycle():
     assert service.quote('a$b%', command=True) == '"a$$b%%"'
 
 
+@pytest.mark.parametrize('missing', [False, True])
+def test_uninstall_disables_owned_unit_even_when_definition_was_deleted(monkeypatch, missing):
+    storage.install()
+    paths = storage.locations()
+    manifest = storage.read_manifest(paths)
+    unit = paths['config'] / service.unit_name(manifest)
+    manifest['service_unit'] = str(unit)
+    storage.atomic_manifest(paths, manifest)
+    if not missing:
+        unit.write_text(service.unit_text(paths, manifest))
+        unit.chmod(0o600)
+    sentinel = paths['data'] / 'unrelated.txt'
+    sentinel.write_text('keep')
+    calls = []
+
+    def manager(*args):
+        calls.append(args)
+        if args[0] == 'show':
+            return 'not-found' if ('daemon-reload',) in calls else 'loaded'
+        if args[0] == 'disable':
+            storage.private(unit)
+            assert unit.read_text() == service.unit_text(paths, manifest)
+        return ''
+
+    monkeypatch.setattr(service, 'manager', manager)
+    service.uninstall()
+    assert ('stop', unit.name) in calls
+    assert ('disable', unit.name) in calls
+    assert not unit.exists()
+    assert 'service_unit' not in storage.read_manifest(paths)
+    assert storage.database_path(paths).exists()
+    assert sentinel.read_text() == 'keep'
+    calls.clear()
+    service.uninstall()
+    assert not calls
+
+
 def test_daemon_refuses_foreign_endpoint(tmp_path):
     storage.install()
     paths = storage.locations()

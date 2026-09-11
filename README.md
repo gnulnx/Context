@@ -57,6 +57,8 @@ uv tool install bl-context
 
 Use Python 3.10 or newer and install the Codex CLI before onboarding. Run onboarding from a logged-in macOS desktop session. The LaunchAgent starts at login and uses the installed Python environment; keep that environment available.
 
+CI tests Python 3.10–3.14 on Ubuntu 24.04 (x86_64 and ARM64) and macOS (Apple Silicon). Debian 12 and 13 are also tested on amd64 and arm64 using their distribution Python versions, including real CPU embeddings. Linux onboarding requires a working systemd user session; Debian CI uses containers and does not verify Debian boot/login behavior. See the [test matrix](docs/DEVELOPMENT.md#4-full-integration--system-acceptance-tests) for coverage details. Use a virtual environment or `uv tool install bl-context` on distributions that protect the system Python.
+
 ### 2. Onboard your agent
 
 ```bash
