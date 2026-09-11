@@ -17,6 +17,32 @@ from .retrieval_cli import context, index_command, index_status, recent, search
 CLI_PROVIDERS = {"codex": CODEX_PROVIDER}
 
 
+def rich_ui_enabled(console, no_color):
+    return bool(
+        console is not None
+        and console.is_terminal
+        and not no_color
+        and not console.no_color
+    )
+
+
+def choose_hooks_plain(console):
+    console.print("\n Optional Codex hooks", markup=False)
+    console.print(
+        " Hooks enable automatic local capture and run outside the Codex sandbox.",
+        markup=False,
+    )
+    console.print(
+        " Codex will separately ask you to review and trust the handler.",
+        markup=False,
+    )
+    console.print(
+        " Search, retrieval, and manual saves still work if you skip.\n",
+        markup=False,
+    )
+    return click.confirm(" Install hooks for automatic capture?", default=True)
+
+
 def output_options(function):
     function = click.option("--no-color", is_flag=True, help="Disable ANSI colors.")(function)
     return click.option("--json", "json_output", is_flag=True, help="Emit JSON only.")(function)
@@ -46,15 +72,24 @@ def report(
     no_color = no_color or ctx.obj["no_color"]
     console = None if json_output else Console(no_color=no_color, highlight=False)
     live_form = None
-    if console is not None and not console.is_terminal:
+    rich_ui = rich_ui_enabled(console, no_color)
+    if console is not None and not rich_ui:
         console.print("\n Base Layer Context - Persistent memory for coding agents\n")
     try:
         adapter = installer_for(provider)
-        if console is not None and console.is_terminal:
+        if rich_ui:
+            operations = {
+                "install": "Installing Codex integration",
+                "uninstall": "Uninstalling Codex integration",
+                "status": "Checking Codex integration",
+                "doctor": "Diagnosing Codex integration",
+            }
             live_form = InstallerForm(
                 console,
                 adapter.display_steps(command, step),
                 show_diagnostics=command == "doctor",
+                full_screen=command == "install",
+                operation=operations[command],
             )
             progress_context = progress(callback=live_form.update_embedding)
             history_progress_context = history_progress(
@@ -67,9 +102,18 @@ def report(
             if command == "install":
                 observers["choose_hooks"] = live_form.choose_hooks
         else:
-            progress_context = progress(console)
+            progress_console = (
+                None if console is not None and console.is_terminal else console
+            )
+            progress_context = progress(progress_console)
             history_progress_context = history_progress()
-            observers = {}
+            observers = (
+                {"choose_hooks": lambda: choose_hooks_plain(console)}
+                if command == "install"
+                and console is not None
+                and console.is_terminal
+                else {}
+            )
         with live_form or nullcontext(), progress_context, history_progress_context:
             if command == "install":
                 results = adapter.install(

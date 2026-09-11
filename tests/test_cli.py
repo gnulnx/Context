@@ -1,11 +1,13 @@
 import json
+from io import StringIO
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
 
 from bl_context.checks import CheckStatus, Step, run_checks
-from bl_context.cli import main
+from bl_context.cli import choose_hooks_plain, main, rich_ui_enabled
 
 
 def test_red_snapshot(monkeypatch, tmp_path):
@@ -16,6 +18,28 @@ def test_red_snapshot(monkeypatch, tmp_path):
     assert result.exit_code == 1
     assert result.output == (Path(__file__).parent / "snapshots/install.txt").read_text()
     assert "\x1b" not in result.output
+
+
+def test_rich_ui_requires_a_colored_interactive_terminal():
+    interactive = Console(force_terminal=True, no_color=False)
+    monochrome = Console(force_terminal=True, no_color=True)
+    redirected = Console(force_terminal=False, no_color=False)
+
+    assert rich_ui_enabled(interactive, no_color=False)
+    assert not rich_ui_enabled(interactive, no_color=True)
+    assert not rich_ui_enabled(monochrome, no_color=False)
+    assert not rich_ui_enabled(redirected, no_color=False)
+
+
+def test_plain_hooks_prompt_preserves_security_choice(monkeypatch):
+    output = StringIO()
+    console = Console(file=output, force_terminal=False, no_color=True)
+    monkeypatch.setattr("bl_context.cli.click.confirm", lambda *args, **kwargs: False)
+
+    assert choose_hooks_plain(console) is False
+    rendered = output.getvalue()
+    assert "outside the Codex sandbox" in rendered
+    assert "manual saves still work" in rendered
 
 
 @pytest.mark.parametrize("args", [
