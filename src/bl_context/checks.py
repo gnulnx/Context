@@ -148,7 +148,7 @@ STEPS = (
     BackgroundServiceStep("background_service", "Background service installed", prerequisites=("data_directory",)),
     CodexMcpStep("codex_mcp", "Codex MCP registered", prerequisites=("background_service",)),
     CodexSkillsStep("codex_skills", "Codex skills installed", prerequisites=("data_directory",)),
-    CodexHooksStep("codex_hooks", "Codex hooks installed", prerequisites=("codex_mcp", "codex_skills")),
+    
     Step("embedding_model", "Embedding model available", prerequisites=("data_directory",)),
     Step("session_discovery", "Existing Codex sessions discovered", history=True, prerequisites=("data_directory",)),
     Step("history_index", "Historical sessions indexed", history=True,
@@ -157,6 +157,7 @@ STEPS = (
     Step("mcp_health", "MCP connection healthy", prerequisites=("codex_mcp", "service_health")),
     Step("history_retrieval", "Historical memory retrieval verified", history=True,
          prerequisites=("history_index", "mcp_health")),
+    CodexHooksStep("codex_hooks", "Codex hooks installed", prerequisites=("codex_mcp", "codex_skills")),
 )
 
 UNINSTALL_STEPS = (
