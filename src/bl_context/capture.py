@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS capture_events (
  received REAL NOT NULL, processed REAL);
 '''
 EVENTS = ('SessionStart', 'Stop', 'SessionEnd')
+# Allow a burst of hooks to serialize, leaving room for the 200 ms SQLite
+# busy timeout and process startup within the registered two-second deadline.
+OWNERSHIP_WAIT_SECONDS = 1.0
 
 
 def connect(paths):
@@ -33,7 +36,7 @@ def signature(path):
 
 def receive(event, installation_id, generation):
     paths = storage.locations()
-    with storage.locked(paths, timeout=.2):
+    with storage.locked(paths, timeout=OWNERSHIP_WAIT_SECONDS):
         manifest = storage.read_manifest(paths)
         owned = manifest.get('codex_hooks')
         if (manifest['state'] != 'active' or manifest['installation_id'] != installation_id
@@ -62,13 +65,15 @@ def receive(event, installation_id, generation):
         event_id = hashlib.sha256(json.dumps([runtime_key,event['hook_event_name'],event.get('source'),
                       event.get('turn_id'),transcript,stamp],sort_keys=True).encode()).hexdigest()
         with closing(connect(paths)) as db, db:
-            db.executescript(SCHEMA)
+            # Registration creates the schema before publishing the hooks.
             db.execute('BEGIN IMMEDIATE')
             previous = db.execute('SELECT * FROM capture_bindings WHERE runtime_key=?',(runtime_key,)).fetchone()
             binding = previous['binding_key'] if previous else str(uuid.uuid4())
             project = previous['project'] if previous else cwd
             db.execute('''INSERT INTO capture_bindings VALUES (?,?,?,?,NULL,NULL,NULL)
-                ON CONFLICT(runtime_key) DO UPDATE SET transcript=coalesce(excluded.transcript,capture_bindings.transcript)''',
+                ON CONFLICT(runtime_key) DO UPDATE SET transcript=excluded.transcript
+                WHERE excluded.transcript IS NOT NULL
+                  AND capture_bindings.transcript IS NOT excluded.transcript''',
                 (runtime_key,binding,project,transcript))
             db.execute('INSERT OR IGNORE INTO capture_events VALUES (?,?,?,?,NULL)',
                        (event_id,runtime_key,event['hook_event_name'],time.time()))

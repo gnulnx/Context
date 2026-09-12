@@ -22,7 +22,7 @@ def main():
         result = receive(json.loads(payload),args.installation_id,args.generation)
     except Exception as exc:
         # Advisory failure: never block the engineer or initiate a continuation.
-        print(f'Context capture deferred: {exc}',file=sys.stderr)
+        print(f'Context capture skipped: {exc}',file=sys.stderr)
         result = {}
     print(json.dumps(result))
 

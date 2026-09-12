@@ -7,7 +7,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 import pytest
 from click.testing import CliRunner
@@ -55,6 +55,55 @@ def test_binding_duplicates_resume_fork_null_path_and_disconnect(tmp_path):
     assert send(event()) == {}  # Old registration generation cannot enqueue.
 
 
+def test_hook_waits_out_brief_ownership_contention(monkeypatch):
+    paths, identifier, generation = setup()
+    attempted = threading.Event()
+    original_lock = storage.locked
+
+    @contextmanager
+    def observed_lock(paths, timeout=None):
+        if timeout is not None:
+            attempted.set()
+        with original_lock(paths, timeout=timeout):
+            yield
+
+    monkeypatch.setattr(storage, 'locked', observed_lock)
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with original_lock(paths):
+            future = workers.submit(capture.receive, event(), identifier, generation)
+            assert attempted.wait(2)
+            # Simulate a short filesystem/competing-hook stall beyond the old
+            # 200 ms budget. The event must actually be persisted after release.
+            time.sleep(.3)
+        result = future.result(timeout=2)
+    assert result['hookSpecificOutput']['hookEventName'] == 'SessionStart'
+    assert capture.status(paths)['events'] == {'SessionStart': 1}
+
+
+@pytest.mark.parametrize('distinct_sessions', [False, True])
+def test_concurrent_hook_processes_persist_bindings(distinct_sessions):
+    paths, identifier, generation = setup()
+    command = [sys.executable, '-m', 'bl_context.hook_handler',
+               '--installation-id', identifier, '--generation', generation,
+               '--handler-version', codex_hooks.handler_version()]
+
+    def send(number):
+        payload = event(runtime=f'session-{number}' if distinct_sessions else 'session-a')
+        result = subprocess.run(command, input=json.dumps(payload), text=True,
+                                capture_output=True, timeout=3)
+        assert result.returncode == 0 and not result.stderr, result.stderr
+        return json.loads(result.stdout)
+
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        outputs = list(workers.map(send, range(8)))
+    assert outputs[0]['hookSpecificOutput']['hookEventName'] == 'SessionStart'
+    expected = 8 if distinct_sessions else 1
+    assert len({json.dumps(output, sort_keys=True) for output in outputs}) == expected
+    assert capture.status(paths)['events'] == {'SessionStart': expected}
+    with closing(capture.connect(paths)) as db:
+        assert db.execute('SELECT count(*) FROM capture_bindings').fetchone()[0] == expected
+
+
 def test_hook_imports_only_capture_runtime():
     result = subprocess.run(
         [sys.executable, '-c',
@@ -77,9 +126,10 @@ def test_handler_bounds_and_invalid_input(tmp_path):
         assert time.monotonic()-start < 1
     with storage.locked(paths):
         start = time.monotonic()
-        result = subprocess.run(command,input=json.dumps(event()),text=True,capture_output=True,timeout=2)
+        result = subprocess.run(command,input=json.dumps(event()),text=True,capture_output=True,timeout=3)
         assert json.loads(result.stdout) == {}
-        assert time.monotonic()-start < 1
+        assert 'capture skipped: Context ownership lock is busy' in result.stderr
+        assert time.monotonic()-start < 2  # Registered Codex hook deadline.
 
 
 def test_hooks_preserve_unrelated_config_and_remove_owned_edits(tmp_path):

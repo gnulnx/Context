@@ -125,7 +125,7 @@ Base Layer Context operates as an offline, single-writer daemon communicating ov
 1. **The CLI (`blc`)**: High-level onboarding, health diagnostics, manual search, and transcript exploration.
 2. **The User Daemon (`blctxd`)**: Single-writer daemon managing SQLite WAL and Qdrant local vector storage. Independent worker threads ensure queries never block during index synchronization.
 3. **The Stdio MCP Server**: Exposes 8 tools: `work_overview`, `search_context`, `get_tag`, `recent_context`, `get_context`, `context_status`, `open_session`, and `log_update`.
-4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) that enqueue transcript snapshots into SQLite in under 2ms without holding your conversation open.
+4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) enqueue transcript references without running embeddings. They allow up to one second for brief ownership-lock contention within a two-second hook deadline; prolonged contention is reported as a skipped capture.
 
 ---
 
