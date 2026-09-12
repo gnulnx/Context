@@ -4,8 +4,8 @@ Set Shell "bash"
 Set Theme "GitHub Dark"
 Set FontFamily "JetBrains Mono"
 Set FontSize 18
-Set Width 1200
-Set Height 800
+Set Width 1000
+Set Height 620
 Set Padding 20
 Set WindowBar Colorful
 Set WindowBarSize 32
