@@ -1,24 +1,14 @@
 # Base Layer Context
 
 <p align="center">
-  <strong>Zero-config local agent memory that just works.</strong><br>
-  <strong>Persistent, private memory for coding agents.</strong><br>
-  Recall recent work and saved decisions across sessions, projects, and restarts on your machine.
-</p>
-
-<p align="center">
-  <a href="https://pypi.org/project/bl-context/"><img src="https://img.shields.io/pypi/v/bl-context?color=blue&style=flat-square" alt="PyPI version" /></a>
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square" alt="Python 3.10+" />
-  <img src="https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey?style=flat-square" alt="Platforms Linux and macOS" />
-  <img src="https://img.shields.io/badge/privacy-100%25%20local%20%2F%20offline-success?style=flat-square" alt="100% Local" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License MIT" />
+  <strong><i>Zero-config</i> local agent memory that just works.</strong><br>
 </p>
 
 ---
 
 ## The Payoff: Immediate Agent Recall
 
-We meet you where you work. **The terminal.**  And then stay out of your way.
+We meet you where you work. ***The terminal.***  And then stay out of your way.
 
 ![Base Layer Context Installation Demo](assets/demo.gif)
 
@@ -28,12 +18,16 @@ For example: Tell Codex a magic word in one session. Ask again in a fresh sessio
 
 ![Two Codex sessions: say the magic word is Base, then recall it through Base Layer Context](assets/recall.gif)
 
+<p align="center">
+  <img src="https://img.shields.io/badge/privacy-100%25%20local%20%2F%20offline-success?style=flat-square" alt="100% Local" />
+</p>
+
 ---
 
 ## Why Base Layer Context?
 
 Coding agents suffer from **agent amnesia**. 
-Sessions end. Context disappears. Rebuilding that context manually wastes time and tokens.
+Sessions ***end***. Context ***disappears***. Rebuilding that context manually ***wastes time and tokens.***
 
 Base Layer Context bridges this gap with a lightweight, private, system-level memory daemon:
 
