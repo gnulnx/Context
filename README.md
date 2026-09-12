@@ -36,14 +36,14 @@ Rebuilding that context manually ***wastes time and tokens.***
 Base Layer Context bridges this gap with a lightweight, private, system-level memory daemon:
 
 * 🧠 **Zero Manual Effort:** Automatically captures session starts, turn milestones, and completions via non-blocking lifecycle hooks.
-* 🔒 **100% Local & Private:** Your memory stays on your machine. No telemetry. No external API calls. Local embeddings and Qdrant handle retrieval entirely offline.
+* 🔒 **100% Local & Private:** torage, embeddings, and retrieval are local. Initial setup downloads model files, and retrieved excerpts go to your coding agent—whose provider/privacy settings still apply.
 * ⚡ **Works Across Projects:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
 * 📜 **Source References:** Transcript excerpts retain timestamps, source locations, and session IDs. Authored notes retain their IDs and attribution. Retrieved statements are evidence, not independent verification.
 * 🛡️ **Zero-Surprise Permissions:** Runs in your user session through systemd on Linux or a launchd LaunchAgent on macOS, with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
 
 ---
 
-## Quickstart (30 Seconds)
+## Quickstart
 
 ### 1. Install package
 
