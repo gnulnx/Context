@@ -74,7 +74,7 @@ class DataDirectoryStep(Step):
             return CheckResult(
                 self.step_id, self.label, CheckStatus.FAILED, "Data installation unavailable",
                 diagnostic=str(exc),
-                remediation="Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+                remediation="Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             )
 
 
@@ -88,7 +88,7 @@ class BackgroundServiceStep(Step):
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED,
                                "Background service unavailable", diagnostic=str(exc),
-                               remediation="Run blctx install codex --step background_service. " + service.diagnostics())
+                               remediation="Run blc install codex --step background_service. " + service.diagnostics())
 
 
 class CodexMcpStep(Step):
@@ -100,7 +100,7 @@ class CodexMcpStep(Step):
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, mcp_registration.verify())
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, "Codex MCP unavailable",
-                               diagnostic=str(exc), remediation="Run blctx install codex --step codex_mcp.")
+                               diagnostic=str(exc), remediation="Run blc install codex --step codex_mcp.")
 
 class CodexSkillsStep(Step):
     def install(self):
@@ -111,7 +111,7 @@ class CodexSkillsStep(Step):
             return CheckResult(self.step_id, self.label, CheckStatus.PASSED, codex_skills.verify())
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, "Codex skill unavailable",
-                               diagnostic=str(exc), remediation="Run blctx install codex --step codex_skills.")
+                               diagnostic=str(exc), remediation="Run blc install codex --step codex_skills.")
 
 
 class EmbeddingModelStep(Step):
@@ -131,7 +131,7 @@ class EmbeddingModelStep(Step):
                 "Embedding model unavailable",
                 diagnostic=str(exc),
                 remediation=(
-                    "Run blctx install codex --step embedding_model; "
+                    "Run blc install codex --step embedding_model; "
                     "completed downloads are reused."
                 ),
             )
@@ -153,7 +153,7 @@ class SessionDiscoveryStep(Step):
                 CheckStatus.FAILED,
                 "Codex session discovery unavailable",
                 diagnostic=str(exc),
-                remediation="Run blctx install codex --step session_discovery.",
+                remediation="Run blc install codex --step session_discovery.",
             )
 
 
@@ -173,7 +173,7 @@ class HistoryIndexStep(Step):
                 CheckStatus.FAILED,
                 "Recent Codex history is not indexed",
                 diagnostic=str(exc),
-                remediation="Run blctx install codex --step history_index.",
+                remediation="Run blc install codex --step history_index.",
             )
 
 
@@ -190,7 +190,7 @@ class ServiceHealthStep(Step):
                 CheckStatus.FAILED,
                 'Service health unavailable',
                 diagnostic=str(exc),
-                remediation='Run blctx doctor --step background_service.',
+                remediation='Run blc doctor --step background_service.',
             )
 
 
@@ -207,7 +207,7 @@ class McpHealthStep(Step):
                 CheckStatus.FAILED,
                 'MCP connection unavailable',
                 diagnostic=str(exc),
-                remediation='Run blctx doctor --step codex_mcp.',
+                remediation='Run blc doctor --step codex_mcp.',
             )
 
 
@@ -224,7 +224,7 @@ class HistoryRetrievalStep(Step):
                 CheckStatus.FAILED,
                 'Historical memory retrieval unavailable',
                 diagnostic=str(exc),
-                remediation='Run blctx doctor --step history_retrieval.',
+                remediation='Run blc doctor --step history_retrieval.',
             )
 
 
@@ -254,7 +254,7 @@ class CodexHooksStep(Step):
             )
         except Exception as exc:
             return CheckResult(self.step_id, self.label, CheckStatus.FAILED, 'Codex hooks unavailable',
-                               diagnostic=str(exc), remediation='Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.')
+                               diagnostic=str(exc), remediation='Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.')
 
 
 class FinalizingStep(Step):
@@ -285,7 +285,7 @@ class FinalizingStep(Step):
                 CheckStatus.FAILED,
                 "Installation not finalized",
                 diagnostic=str(exc),
-                remediation="Run blctx install codex.",
+                remediation="Run blc install codex.",
             )
 
 
@@ -448,7 +448,7 @@ def run_checks(
                 result = CheckResult(
                     step.step_id, step.label, CheckStatus.FAILED,
                     "Check failed", diagnostic=str(exc),
-                    remediation="Run blctx doctor for diagnostics.",
+                    remediation="Run blc doctor for diagnostics.",
                 )
         results[step.step_id] = replace(
             result, duration=monotonic() - started,

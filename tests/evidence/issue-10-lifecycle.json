@@ -3,7 +3,7 @@
   "records": [
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "codex_hooks",
@@ -25,7 +25,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "[Errno 2] No such file or directory: '/tmp/blctx-hook-lifecycle-1y7fsq52/data/bl-context'",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.01219340693205595,
             "skip_reason": null,
             "dependency": false
@@ -35,7 +35,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -107,7 +107,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.4687875579111278,
             "skip_reason": null,
             "dependency": false
@@ -117,7 +117,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -189,7 +189,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.25225749611854553,
             "skip_reason": null,
             "dependency": false
@@ -199,7 +199,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "codex_hooks",
@@ -221,7 +221,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.23273515002802014,
             "skip_reason": null,
             "dependency": false
@@ -231,7 +231,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "uninstall",
         "codex",
         "--json"
@@ -262,7 +262,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "codex_hooks",
@@ -284,7 +284,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.012502359692007303,
             "skip_reason": null,
             "dependency": false
@@ -294,7 +294,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "codex_hooks",
@@ -316,7 +316,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.012891605030745268,
             "skip_reason": null,
             "dependency": false
@@ -326,7 +326,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -398,7 +398,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.25731982197612524,
             "skip_reason": null,
             "dependency": false
@@ -408,7 +408,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -480,7 +480,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.23767952993512154,
             "skip_reason": null,
             "dependency": false
@@ -490,7 +490,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "codex_hooks",
@@ -512,7 +512,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context hooks need Codex trust or are disabled. Open Codex /hooks and review all three Context hooks",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.23777656583115458,
             "skip_reason": null,
             "dependency": false
@@ -522,7 +522,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "uninstall",
         "codex",
         "--json"
@@ -553,7 +553,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "codex_hooks",
@@ -575,7 +575,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.012499426957219839,
             "skip_reason": null,
             "dependency": false
@@ -585,7 +585,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "codex_hooks",
@@ -607,7 +607,7 @@
             "status": "failed",
             "summary": "Codex hooks unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blctx doctor --step codex_hooks.",
+            "remediation": "Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.",
             "duration": 0.012543461751192808,
             "skip_reason": null,
             "dependency": false

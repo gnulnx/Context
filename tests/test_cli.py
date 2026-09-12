@@ -108,7 +108,7 @@ def test_no_history():
 def test_doctor_explains_failure():
     result = CliRunner().invoke(main, ["doctor", "--no-color"])
     assert result.exit_code == 1
-    assert "Run blctx install codex --step data_directory" in result.output
+    assert "Run blc install codex --step data_directory" in result.output
 
 
 def test_install_does_not_earn_pass():

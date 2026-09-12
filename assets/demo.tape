@@ -14,7 +14,7 @@ Set CursorBlink false
 
 # Reset the integration so every recording follows the complete install path.
 Hide
-Type "export PATH=$PWD/.venv/bin:$PATH PS1='> ' && blctx uninstall codex --no-color >/dev/null 2>&1 && clear && printf 'DEMO_%s\\n' READY"
+Type "export PATH=$PWD/.venv/bin:$PATH PS1='> ' && blc uninstall codex --no-color >/dev/null 2>&1 && clear && printf 'DEMO_%s\\n' READY"
 Enter
 Wait+Screen@30s /DEMO_READY/
 Type "clear"
@@ -25,7 +25,7 @@ Show
 # The only command users need to remember.
 Set TypingSpeed 50ms
 Sleep 1s
-Type "blctx install codex"
+Type "blc install codex"
 Sleep 500ms
 Enter
 

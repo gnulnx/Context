@@ -447,7 +447,7 @@
     },
     {
       "command": [
-        "/tmp/context-issue5-venv/bin/blctx",
+        "/tmp/context-issue5-venv/bin/blc",
         "install",
         "codex",
         "--step",
@@ -494,7 +494,7 @@
     },
     {
       "command": [
-        "/tmp/context-issue5-venv/bin/blctx",
+        "/tmp/context-issue5-venv/bin/blc",
         "status",
         "--step",
         "data_directory",
@@ -527,7 +527,7 @@
     },
     {
       "command": [
-        "/tmp/context-issue5-venv/bin/blctx",
+        "/tmp/context-issue5-venv/bin/blc",
         "doctor",
         "--step",
         "data_directory",
@@ -560,7 +560,7 @@
     },
     {
       "command": [
-        "/tmp/context-issue5-venv/bin/blctx",
+        "/tmp/context-issue5-venv/bin/blc",
         "install",
         "codex",
         "--json"

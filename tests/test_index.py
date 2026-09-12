@@ -368,7 +368,7 @@ def test_daemon_replays_durable_jobs_and_serves_cli(tmp_path, install_embedding)
     engine.close()
     command = [sys.executable,'-m','bl_context.daemon','--installation-id',storage.read_manifest(paths)['installation_id']]
     child = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    cli = str(Path(sys.executable).parent/'blctx')
+    cli = str(Path(sys.executable).parent/'blc')
     def invoke(*args):
         proc = subprocess.run([cli,*args],text=True,capture_output=True,timeout=45)
         assert proc.returncode == 0, proc.stdout+proc.stderr

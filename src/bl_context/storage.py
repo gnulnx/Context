@@ -244,12 +244,12 @@ def install():
                 'owned_directories': sorted(created),
                 'owned_files': [str(database_path(paths)), str(path)],
                 'interpreter': os.path.abspath(sys.executable),
-                'executable': str(Path(sysconfig.get_path('scripts')) / 'blctx'),
+                'executable': str(Path(sysconfig.get_path('scripts')) / 'blc'),
             }
             atomic_manifest(paths, manifest)
         initialize_database(paths, manifest['installation_id'])
         manifest.update(state='active', interpreter=os.path.abspath(sys.executable),
-                        executable=str(Path(sysconfig.get_path('scripts')) / 'blctx'))
+                        executable=str(Path(sysconfig.get_path('scripts')) / 'blc'))
         atomic_manifest(paths, manifest)
 
 

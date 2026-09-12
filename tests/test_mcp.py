@@ -119,12 +119,12 @@ def test_mcp_install_lifecycle(tmp_path, monkeypatch):
     original = mcp_registration.config(root)
     transcript = root/'original.jsonl'
     transcript.write_text('preserve original')
-    cli = str(Path(sys.executable).parent/'blctx')
+    cli = str(Path(sys.executable).parent/'blc')
     evidence = []
     def run(args, expected):
         result = subprocess.run([cli, *args, '--json'], capture_output=True, text=True, timeout=45)
         assert result.returncode == expected, result.stdout+result.stderr
-        evidence.append({'command':['blctx',*args,'--json'], 'exit_code':result.returncode,'json':json.loads(result.stdout)})
+        evidence.append({'command':['blc',*args,'--json'], 'exit_code':result.returncode,'json':json.loads(result.stdout)})
         assert transcript.read_text() == 'preserve original'
         assert mcp_registration.unrelated(mcp_registration.config(root)) == original
     try:

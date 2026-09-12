@@ -16,7 +16,7 @@ def snapshot(root):
 
 
 def test_real_cli_lifecycle(tmp_path):
-    cli = str(Path(sys.executable).parent / 'blctx')
+    cli = str(Path(sys.executable).parent / 'blc')
     original = tmp_path / '.codex/sessions/original.jsonl'
     original.parent.mkdir(parents=True)
     original.write_text('original transcript')
@@ -35,7 +35,7 @@ def test_real_cli_lifecycle(tmp_path):
             assert snapshot(tmp_path) == before
         assert original.read_text() == 'original transcript'
         assert unrelated.read_text() == 'user configuration'
-        records.append({'command': ['blctx', *args, '--json'], 'exit_code': code, 'json': data})
+        records.append({'command': ['blc', *args, '--json'], 'exit_code': code, 'json': data})
 
     for cmd in ('status', 'doctor'):
         run([cmd, '--step', 'data_directory'], 1)
@@ -65,7 +65,7 @@ def test_real_cli_lifecycle(tmp_path):
     run(['install', 'codex', '--step', 'data_directory'], 0)
     if os.environ.get('BLCTX_TEST_EVIDENCE'):
         Path(os.environ['BLCTX_TEST_EVIDENCE']).write_text(json.dumps({
-            'environment': 'Isolated HOME, Linux, real installed blctx entry point; cwd=/',
+            'environment': 'Isolated HOME, Linux, real installed blc entry point; cwd=/',
             'preservation': 'Original transcripts, unrelated config and unknown cache file preserved. Status/doctor snapshots unchanged.',
             'records': records,
         }, indent=2) + '\n')

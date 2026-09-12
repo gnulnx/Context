@@ -1,4 +1,4 @@
-# UX & Product Experience Review: Base Layer Context (`blctx`)
+# UX & Product Experience Review: Base Layer Context (`blc`)
 **Author:** Lead UX Engineer  
 **Date:** September 2026  
 **Status:** Ready for Review  
@@ -8,12 +8,12 @@
 
 ## 1. Executive Summary
 
-Base Layer Context (`blctx`) sets out to solve one of the most acute friction points in agentic coding: **agent amnesia**. When a developer returns to a project after a few days, their coding agent starts from zero, requiring tedious manual re-orientation or bloated context windows. `blctx` provides an elegant, 100% private, local-first persistent memory engine powered by SQLite, FastEmbed, and local Qdrant vectors, interfacing directly with Codex through standard Model Context Protocol (MCP) and lifecycle hooks.
+Base Layer Context (`blc`) sets out to solve one of the most acute friction points in agentic coding: **agent amnesia**. When a developer returns to a project after a few days, their coding agent starts from zero, requiring tedious manual re-orientation or bloated context windows. `blc` provides an elegant, 100% private, local-first persistent memory engine powered by SQLite, FastEmbed, and local Qdrant vectors, interfacing directly with Codex through standard Model Context Protocol (MCP) and lifecycle hooks.
 
 The strategic shift for this project is deliberate: **flip the traditional systems-engineering paradigm to lead with customer-centricity, market appeal, and unshakeable user trust.**
 
 ### The Experience Verdict
-The underlying systems engineering is ambitious and privacy-respecting. However, our comprehensive end-to-end evaluation (`blctx uninstall`, `blctx install`, `blctx status`, `blctx doctor`, and transcript exploration) reveals critical UX friction points where internal architecture leaks through to the user interface. These issues inadvertently create confusion, trigger false alarms, and undermine the exact trust and confidence the product aims to build.
+The underlying systems engineering is ambitious and privacy-respecting. However, our comprehensive end-to-end evaluation (`blc uninstall`, `blc install`, `blc status`, `blc doctor`, and transcript exploration) reveals critical UX friction points where internal architecture leaks through to the user interface. These issues inadvertently create confusion, trigger false alarms, and undermine the exact trust and confidence the product aims to build.
 
 ### Trust & Confidence Scorecard
 
@@ -56,11 +56,11 @@ To transition to a marketing-first, customer-centric showcase:
 
 ```mermaid
 graph TD
-    A[Hero: Headline + 15s High-Impact Demo GIF] --> B[The 30-Second Quickstart: pip install + blctx install codex]
+    A[Hero: Headline + 15s High-Impact Demo GIF] --> B[The 30-Second Quickstart: pip install + blc install codex]
     B --> C[Value Props: Why Local Memory Matters]
     C --> D[How It Works: 3-Pillar Privacy Architecture]
     D --> E[In Action: What to ask your Agent]
-    E --> F[Verification: blctx status & Troubleshooting]
+    E --> F[Verification: blc status & Troubleshooting]
     F --> G[Deep Dives & Engineering Specs: Linked docs/ARCH.md]
 ```
 
@@ -77,12 +77,12 @@ graph TD
 
 ---
 
-## 3. The Onboarding Flow (`blctx install codex`)
+## 3. The Onboarding Flow (`blc install codex`)
 
 Running the installation lifecycle across real user environments revealed both significant design triumphs and severe friction points.
 
 ### 3.1 The "Exit 1 / Red / Not Ready" Paradox (Critical P0)
-When a user runs `blctx install codex`:
+When a user runs `blc install codex`:
 1. The installer successfully sets up directories, starts the daemon, registers the MCP server, indexes recent sessions, and writes the Codex hooks.
 2. However, because Codex requires the user to open `/hooks` and approve the new hooks upon next launch, the installer classifies the hook step as `Warning` (`!`) or `Failed` (`✗`).
 3. The installer concludes with:
@@ -130,7 +130,7 @@ When the terminal height is below 26 rows (common on 13" laptops, split tmux pan
    ! Codex hooks installed
    Not ready.
    ```
-   Even if they explicitly invoked `blctx doctor`!
+   Even if they explicitly invoked `blc doctor`!
 
 #### The Solution: Priority-Driven Responsive Layout
 When vertical space is constrained:
@@ -189,26 +189,26 @@ In `src/bl_context/daemon.py` and `src/bl_context/index.py`:
       self.vectors.upsert(COLLECTION, ...)
   ```
 - On a repository with 50,000+ chunks, this upsert takes **3 to 4 minutes** of continuous disk I/O.
-- Because `max_workers=1`, **all incoming client requests (`recent_context`, `search_context`, `blctx recent`) queue behind the rebuild.**
+- Because `max_workers=1`, **all incoming client requests (`recent_context`, `search_context`, `blc recent`) queue behind the rebuild.**
 - After 30 seconds, `Index.submit` raises a `TimeoutError`.
 
 **The Confusing User Diagnostic:**
-1. The user notices their agent is sluggish and runs `blctx recent` $\rightarrow$ `Error: TimeoutError. Check blctx doctor --step background_service.`
-2. The user runs `blctx doctor --step background_service` $\rightarrow$ `✓ Background service installed: Service healthy` (because `health` executes a trivial SQLite query and bypasses the worker!).
-3. The user runs `blctx doctor --step history_retrieval` $\rightarrow$ `✗ MCP stdio health check timed out after 20 seconds.`
+1. The user notices their agent is sluggish and runs `blc recent` $\rightarrow$ `Error: TimeoutError. Check blc doctor --step background_service.`
+2. The user runs `blc doctor --step background_service` $\rightarrow$ `✓ Background service installed: Service healthy` (because `health` executes a trivial SQLite query and bypasses the worker!).
+3. The user runs `blc doctor --step history_retrieval` $\rightarrow$ `✗ MCP stdio health check timed out after 20 seconds.`
 
 **UX Impact:** The user receives contradictory signals—the CLI says the service is healthy, but every operation times out. They have no way of knowing the daemon is simply busy performing an internal migration.
 
 #### Recommendations:
 1. **Separate Query Worker from Ingestion Worker:** Read operations like `recent_context` (which only query SQLite and don't even touch Qdrant!) should never be blocked by vector indexing jobs.
-2. **Expose Ingestion/Sync State in Health Checks:** `blctx status` should explicitly show:  
+2. **Expose Ingestion/Sync State in Health Checks:** `blc status` should explicitly show:
    `⚙ Index syncing (52,269 vectors, ~45s remaining)` rather than timing out.
 3. **Batch Size Optimization:** Increase Qdrant upsert batch sizes from 64 to 500+ to reduce transaction overhead by 80%.
 
 ---
 
 ### 4.2 Leftover Systemd Service Units
-`blctx install` names its systemd unit `blctxd-<UUID>.service` based on an installation ID generated during directory setup.  
+`blc install` names its systemd unit `blctxd-<UUID>.service` based on an installation ID generated during directory setup.
 During testing, multiple reinstallations or test suites left orphan systemd user services running concurrently:
 ```console
 blctxd-42c829ae-137c-4dc7-91d… active running Base Layer Context daemon
@@ -218,7 +218,7 @@ blctxd-f3aff311-dfd7-45dd-930… active running Base Layer Context daemon
 When an orphaned daemon attempts to open the same Qdrant storage path, Qdrant throws:
 `Storage folder /home/gnulnx/.local/share/bl-context/vectors is already accessed by another instance of Qdrant client.`
 
-**Recommendation:** Systemd units should use a deterministic name (`blctxd.service` or `blctxd-$USER.service`) with instance locking, or `blctx install` should actively sweep and stop deprecated `blctxd-*.service` units owned by the current user.
+**Recommendation:** Systemd units should use a deterministic name (`blctxd.service` or `blctxd-$USER.service`) with instance locking, or `blc install` should actively sweep and stop deprecated `blctxd-*.service` units owned by the current user.
 
 ---
 
@@ -246,12 +246,12 @@ Rather than gambling on live LLM generation inside VHS, use a dedicated **Demo P
 sequenceDiagram
     autonumber
     actor Dev as Developer (VHS)
-    participant CLI as blctx install codex
+    participant CLI as blc install codex
     participant TUI as Rich Installer
     participant Codex as Codex Mock Shell
     participant MCP as base-layer-context MCP
 
-    Dev->>CLI: blctx install codex
+    Dev->>CLI: blc install codex
     CLI->>TUI: Render checklist & progress bar
     TUI-->>Dev: Prompt: Enable automatic capture?
     Dev->>TUI: [Enter]
@@ -268,7 +268,7 @@ sequenceDiagram
 #### Step-by-Step Demo Implementation:
 
 1. **Part 1: The Fast Installer (7 seconds)**
-   - Type `blctx install codex`
+   - Type `blc install codex`
    - Progress bar smoothly fills for `BAAI/bge-small-en` (cached)
    - Checks turn green: Data Directory, Background Service, MCP Registration, Skills Installed
    - Modal dialog appears: "Automatic Codex capture" $\rightarrow$ Confirmed
@@ -304,7 +304,7 @@ sequenceDiagram
    Set Framerate 30
 
    # Part 1: Install
-   Type "blctx install codex"
+   Type "blc install codex"
    Sleep 500ms
    Enter
    Wait+Screen@10s /Automatic Codex capture/
@@ -326,7 +326,7 @@ This approach gives you **100% reproducible, pixel-perfect recordings** every si
 
 ## 6. Information Architecture & CLI Ergonomics
 
-Currently, running `blctx --help` displays 10 top-level commands without clear categorization:
+Currently, running `blc --help` displays 10 top-level commands without clear categorization:
 ```console
 Commands:
   context       Expand a result's context_id into stored messages...
@@ -351,13 +351,13 @@ Commands:
 - **Maintainers / Debuggers** use:
   - `index`, raw views, manual chunk offsets
 
-When human developers see `blctx search` and `blctx recent` returning raw JSON dumps to stdout, they wonder: *"Am I supposed to use this JSON directly? Where is the human UI?"*
+When human developers see `blc search` and `blc recent` returning raw JSON dumps to stdout, they wonder: *"Am I supposed to use this JSON directly? Where is the human UI?"*
 
 ### 6.2 Proposed Command Hierarchy
 Group commands logically to communicate their intended user:
 
 ```text
-USAGE: blctx <command> [options]
+USAGE: blc <command> [options]
 
 Core Management:
   install       Set up persistent context for an agent (codex)
@@ -379,7 +379,7 @@ Advanced Plumbing:
 ## 7. Actionable Roadmap & Prioritized Recommendations
 
 ### Priority 0: Immediate Trust Restorations (Next Sprint)
-- [ ] **Fix Exit Code on Successful Install:** Ensure `blctx install codex` exits `0` when software is provisioned, clearly messaging the one-time user action required in Codex (`/hooks`).
+- [ ] **Fix Exit Code on Successful Install:** Ensure `blc install codex` exits `0` when software is provisioned, clearly messaging the one-time user action required in Codex (`/hooks`).
 - [ ] **Prevent Diagnostic Hiding in Small Terminals:** Refactor `InstallerForm` in `src/bl_context/installer_ui.py` so that error summaries and remediations are never dropped when vertical height is constrained.
 - [ ] **Fix Terminal Concatenation Bug:** Add an explicit newline in `choose_hooks_plain` after user confirmation in `--no-color` mode.
 - [ ] **Decouple Query Executor from Re-indexing:** In `src/bl_context/index.py`, move vector rebuilds and heavy ingestion to a background task so read operations (`recent_context`) do not experience 30-second timeouts.
@@ -388,7 +388,7 @@ Advanced Plumbing:
 ### Priority 1: Customer-Centric Marketing & Docs (1–2 Weeks)
 - [ ] **Rewrite README.md:** Lead with the 1-sentence value hook, embed the demo GIF at the very top, provide a 2-step Quickstart, and move pytest/fixture details to `docs/DEVELOPMENT.md`.
 - [ ] **Unify Daemon Naming:** Use deterministic systemd user service naming (`blctxd.service`) with auto-cleanup of stale UUID services.
-- [ ] **Differentiate `status` from `doctor`:** Make `blctx status` an instantaneous 200ms health check; make `blctx doctor` the deep end-to-end verifier with actionable repair flags (`blctx doctor --repair`).
+- [ ] **Differentiate `status` from `doctor`:** Make `blc status` an instantaneous 200ms health check; make `blc doctor` the deep end-to-end verifier with actionable repair flags (`blc doctor --repair`).
 
 ### Priority 2: High-Impact Demo & Community Launch (2–3 Weeks)
 - [ ] **Build `scripts/demo_playback.py`:** Create a deterministic CLI simulator for the Codex payoff moment.

@@ -1,6 +1,6 @@
 # Base Layer Context — Developer & Contributor Guide
 
-This guide covers local development, testing harnesses, step-by-step installation verification, and low-level CLI development flags for Base Layer Context (`blctx`).
+This guide covers local development, testing harnesses, step-by-step installation verification, and low-level CLI development flags for Base Layer Context (`blc`).
 
 ---
 
@@ -48,17 +48,17 @@ You can run individual steps for focused testing and development using `--step`:
 
 ```bash
 # Test background service installation and verification
-blctx install codex --step background_service --json
-blctx status --step background_service --json
-blctx doctor --step background_service --no-color
+blc install codex --step background_service --json
+blc status --step background_service --json
+blc doctor --step background_service --no-color
 
 # Test data directory creation and schema integrity
-blctx install codex --step data_directory
-blctx doctor --step data_directory
+blc install codex --step data_directory
+blc doctor --step data_directory
 
 # Skip historical session indexing during quick smoke tests
-blctx install codex --no-history
-blctx status --no-history
+blc install codex --no-history
+blc status --no-history
 ```
 
 ### Exit Codes Contract
@@ -110,36 +110,36 @@ For local package development on either platform:
 
 ```bash
 uv tool install --python 3.11 --editable .
-blctx uninstall codex
-blctx install codex
+blc uninstall codex
+blc install codex
 ```
 
-Source edits make the running daemon stale. Rerun `blctx install codex --step background_service` after editing runtime code. This restarts the daemon only when necessary; repeat installs with unchanged code preserve its PID.
+Source edits make the running daemon stale. Rerun `blc install codex --step background_service` after editing runtime code. This restarts the daemon only when necessary; repeat installs with unchanged code preserve its PID.
 
 ---
 
-## 5. Codex Transcript Exploration (`blctx explore`)
+## 5. Codex Transcript Exploration (`blc explore`)
 
-`blctx explore` is a zero-side-effect, read-only diagnostic tool for inspecting local Codex transcripts before ingesting them:
+`blc explore` is a zero-side-effect, read-only diagnostic tool for inspecting local Codex transcripts before ingesting them:
 
 ```bash
 # List 20 newest transcript paths (active and archived)
-blctx explore
+blc explore
 
 # List up to 100 transcripts
-blctx explore --limit 100
+blc explore --limit 100
 
 # Inspect conversation turns in a specific transcript
-blctx explore /path/to/session.jsonl --limit 3
+blc explore /path/to/session.jsonl --limit 3
 
 # View classified records (index, excluded, duplicate, metadata, unclassified)
-blctx explore /path/to/session.jsonl --view preview --limit 20
+blc explore /path/to/session.jsonl --view preview --limit 20
 
 # View raw JSONL record types, line numbers, and byte offsets
-blctx explore /path/to/session.jsonl --view raw --limit 5
+blc explore /path/to/session.jsonl --view raw --limit 5
 
 # Deep turn details with exclusion breakdown
-blctx explore /path/to/session.jsonl --details --limit 5
+blc explore /path/to/session.jsonl --details --limit 5
 ```
 
 ---
@@ -188,8 +188,8 @@ Design references: [Apple's LaunchAgent lifecycle](https://developer.apple.com/l
 
 ```bash
 # Standard uninstall: stops user service, unregisters MCP, removes hooks, retains data
-blctx uninstall codex
+blc uninstall codex
 
 # Complete purge: stops services, removes all owned files and databases (preserves Codex transcripts)
-blctx uninstall codex --purge
+blc uninstall codex --purge
 ```

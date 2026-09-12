@@ -92,7 +92,7 @@ def verify():
     storage.verify()
     owned = storage.read_manifest(storage.locations()).get('codex_skill')
     if not owned:
-        raise RuntimeError('Context Codex skill is not installed; run blctx install codex --step codex_skills')
+        raise RuntimeError('Context Codex skill is not installed; run blc install codex --step codex_skills')
     path = owned_path(owned)
     if path != target():
         raise RuntimeError('Current CODEX_HOME differs from the owned skill root')

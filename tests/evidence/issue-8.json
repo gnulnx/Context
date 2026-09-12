@@ -1,7 +1,7 @@
 [
   {
     "command": [
-      "blctx",
+      "blc",
       "status",
       "--step",
       "codex_mcp",
@@ -23,7 +23,7 @@
           "status": "failed",
           "summary": "Codex MCP unavailable",
           "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1718/test_mcp_install_lifecycle0/.local/share/bl-context'",
-          "remediation": "Run blctx install codex --step codex_mcp.",
+          "remediation": "Run blc install codex --step codex_mcp.",
           "duration": 0.0023969970643520355,
           "skip_reason": null,
           "dependency": false
@@ -33,7 +33,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "install",
       "codex",
       "--step",
@@ -91,7 +91,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "install",
       "codex",
       "--step",
@@ -149,7 +149,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "status",
       "--step",
       "codex_mcp",
@@ -181,7 +181,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "doctor",
       "--step",
       "codex_mcp",
@@ -213,7 +213,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "uninstall",
       "codex",
       "--json"
@@ -244,7 +244,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "status",
       "--step",
       "codex_mcp",
@@ -266,7 +266,7 @@
           "status": "failed",
           "summary": "Codex MCP unavailable",
           "diagnostic": "Context installation ownership is inactive.",
-          "remediation": "Run blctx install codex --step codex_mcp.",
+          "remediation": "Run blc install codex --step codex_mcp.",
           "duration": 0.002444787882268429,
           "skip_reason": null,
           "dependency": false
@@ -276,7 +276,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "doctor",
       "--step",
       "codex_mcp",
@@ -298,7 +298,7 @@
           "status": "failed",
           "summary": "Codex MCP unavailable",
           "diagnostic": "Context installation ownership is inactive.",
-          "remediation": "Run blctx install codex --step codex_mcp.",
+          "remediation": "Run blc install codex --step codex_mcp.",
           "duration": 0.0024855397641658783,
           "skip_reason": null,
           "dependency": false
@@ -308,7 +308,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "install",
       "codex",
       "--step",
@@ -366,7 +366,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "install",
       "codex",
       "--step",
@@ -424,7 +424,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "status",
       "--step",
       "codex_mcp",
@@ -456,7 +456,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "doctor",
       "--step",
       "codex_mcp",
@@ -488,7 +488,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "uninstall",
       "codex",
       "--json"
@@ -519,7 +519,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "status",
       "--step",
       "codex_mcp",
@@ -541,7 +541,7 @@
           "status": "failed",
           "summary": "Codex MCP unavailable",
           "diagnostic": "Context installation ownership is inactive.",
-          "remediation": "Run blctx install codex --step codex_mcp.",
+          "remediation": "Run blc install codex --step codex_mcp.",
           "duration": 0.0024896562099456787,
           "skip_reason": null,
           "dependency": false
@@ -551,7 +551,7 @@
   },
   {
     "command": [
-      "blctx",
+      "blc",
       "doctor",
       "--step",
       "codex_mcp",
@@ -573,7 +573,7 @@
           "status": "failed",
           "summary": "Codex MCP unavailable",
           "diagnostic": "Context installation ownership is inactive.",
-          "remediation": "Run blctx install codex --step codex_mcp.",
+          "remediation": "Run blc install codex --step codex_mcp.",
           "duration": 0.002475674729794264,
           "skip_reason": null,
           "dependency": false

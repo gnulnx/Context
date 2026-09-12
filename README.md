@@ -62,7 +62,7 @@ CI tests Python 3.10–3.14 on Ubuntu 24.04 (x86_64 and ARM64) and macOS (Apple 
 ### 2. Onboard your agent
 
 ```bash
-blctx install codex
+blc install codex
 ```
 
 The interactive onboarding wizard will:
@@ -106,7 +106,7 @@ Base Layer Context operates as an offline, single-writer daemon communicating ov
 
 ### The 4 Local Components
 
-1. **The CLI (`blctx`)**: High-level onboarding, health diagnostics, manual search, and transcript exploration.
+1. **The CLI (`blc`)**: High-level onboarding, health diagnostics, manual search, and transcript exploration.
 2. **The User Daemon (`blctxd`)**: Single-writer daemon managing SQLite WAL and Qdrant local vector storage. Independent worker threads ensure queries never block during index synchronization.
 3. **The Stdio MCP Server**: Exposes 6 standard tools (`recent_context`, `search_context`, `get_context`, `context_status`, `open_session`, `log_update`) directly to Codex.
 4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) that enqueue transcript snapshots into SQLite in under 2ms without holding your conversation open.
@@ -119,25 +119,25 @@ Base Layer Context operates as an offline, single-writer daemon communicating ov
 
 ```bash
 # Check current readiness and installation health
-blctx status
+blc status
 
 # Diagnose system health, verify daemon, and inspect checks
-blctx doctor
+blc doctor
 ```
 
-### Transcript Exploration (`blctx explore`)
+### Transcript Exploration (`blc explore`)
 
 Safely inspect local Codex transcript files before importing them:
 
 ```bash
 # List the newest 20 transcripts on your machine
-blctx explore
+blc explore
 
 # Preview conversation turns and classified records
-blctx explore /path/to/session.jsonl --limit 3
+blc explore /path/to/session.jsonl --limit 3
 
 # View raw JSONL records, token boundaries, and byte positions
-blctx explore /path/to/session.jsonl --view raw --limit 5
+blc explore /path/to/session.jsonl --view raw --limit 5
 ```
 
 ### Terminal Memory Queries
@@ -146,23 +146,23 @@ Query your agent's memory directly from your terminal:
 
 ```bash
 # View recent turns across the last 3 days
-blctx recent --days 3
+blc recent --days 3
 
 # Semantic search across historical sessions
-blctx search "why did we switch to batched inference?"
+blc search "why did we switch to batched inference?"
 
 # Check indexing status and background jobs
-blctx index-status
+blc index-status
 ```
 
 ### Uninstallation & Clean Removal
 
 ```bash
 # Deactivate integration, stop daemon, and remove hooks (retains database)
-blctx uninstall codex
+blc uninstall codex
 
 # Complete purge (removes all database records and vectors; preserves transcripts)
-blctx uninstall codex --purge
+blc uninstall codex --purge
 ```
 
 ---

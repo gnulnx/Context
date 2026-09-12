@@ -94,7 +94,7 @@ def report(paths=None):
     if not inventory:
         raise RuntimeError(
             "Codex sessions have not been discovered. "
-            "Run blctx install codex --step session_discovery."
+            "Run blc install codex --step session_discovery."
         )
     if (
         inventory.get("schema_version") != 1
