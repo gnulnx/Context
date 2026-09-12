@@ -18,11 +18,11 @@
 
 ## The Payoff: Immediate Agent Recall
 
-We meet you where you work—the console—and then stay out of your way. Once installed, your coding agent gains automatic, persistent context across all your projects.
+We meet you where you work. The console.  And then stay out of your way. Once installed, your coding agent gains automatic, persistent context across all your projects.
 
 ![Base Layer Context Installation Demo](assets/demo.gif)
 
-Tell Codex the magic word in one session. Ask again in a fresh session—Context brings the answer back:
+Tell Codex the magic word in one session. Ask again in a fresh session and Base Layer Context brings the answer back:
 
 ![Two Codex sessions: say the magic word is Base, then recall it through Base Layer Context](assets/recall.gif)
 
