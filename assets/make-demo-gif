@@ -8,11 +8,11 @@ input="${repo_root}/assets/demo.mp4"
 output="${repo_root}/assets/demo.gif"
 output_dir="$(dirname -- "$output")"
 
-# Six frames per second and a broad palette keep the full-canvas GIF below
-# 10 MiB without introducing the color fringing caused by the old 64-color,
-# downscaled conversion.
+# Preserve sharp colors and full frames; check the upload size before publishing
+# the new local GIF. Use decimal MB to stay below either interpretation of 10 MB.
 fps="${GIF_FPS:-6}"
 colors="${GIF_COLORS:-192}"
+max_bytes=10000000
 
 for command_name in vhs ffmpeg; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
@@ -36,7 +36,7 @@ if [[ ! "$colors" =~ ^[0-9]+$ ]] || (( colors < 2 || colors > 256 )); then
     exit 1
 fi
 
-tmp_output="$(mktemp --tmpdir="$output_dir" ".make-demo-gif.XXXXXX.gif")"
+tmp_output="$(mktemp "$output_dir/.make-demo-gif.XXXXXX")"
 trap 'rm -f -- "$tmp_output"' EXIT
 
 echo "Recording $tape with VHS..."
@@ -47,7 +47,7 @@ if [[ ! -s "$input" ]]; then
     exit 1
 fi
 
-# Keep the MP4's native 1200x800 resolution and use a broad palette for sharp
+# Keep the MP4's native resolution and use a broad palette for sharp
 # colored text. Disabling transparency and frame offsets makes every GIF frame
 # self-contained, preventing stale glyph shadows between playback loops.
 ffmpeg \
@@ -60,11 +60,20 @@ ffmpeg \
     -an \
     -gifflags -offsetting-transdiff \
     -loop 0 \
+    -f gif \
     "$tmp_output"
 
-chmod 0644 -- "$tmp_output"
+size_bytes="$(wc -c < "$tmp_output")"
+if (( size_bytes >= max_bytes )); then
+    echo "error: generated GIF is $size_bytes bytes; must be below $max_bytes bytes." >&2
+    echo "Previous GIF preserved. Lower GIF_FPS or shorten holds in assets/demo.tape and retry." >&2
+    exit 1
+fi
+
+# BSD/macOS chmod stops parsing options at the mode argument.
+chmod -- 0644 "$tmp_output"
 mv -f -- "$tmp_output" "$output"
 trap - EXIT
 
 size="$(du -h -- "$output" | cut -f1)"
-echo "Wrote $output ($size, native resolution, ${fps} fps, ${colors} colors, full opaque frames)"
+echo "Wrote $output ($size, $size_bytes/$max_bytes bytes, native resolution, ${fps} fps, ${colors} colors, full opaque frames)"

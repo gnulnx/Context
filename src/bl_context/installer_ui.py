@@ -18,6 +18,91 @@ from .checks import CheckStatus
 
 MAX_PAGE_WIDTH = 112
 SCREEN_ROW_MARGIN = 2
+COMPLETION_WIDTH = 78
+
+
+def render_install_completion(
+    console, results, *, success, ready, selected_step=None, no_history=False,
+    styled=True, interrupted=False,
+):
+    """Render one persistent ending, without alternate-screen height or cropping."""
+    if interrupted:
+        heading = "✗ Installation interrupted"
+    elif selected_step:
+        heading = "✓ Selected step complete" if success else "✗ Selected step failed"
+    elif ready:
+        heading = "✓ Installation complete"
+    else:
+        heading = "✗ Installation incomplete"
+    color = "green" if success and not interrupted else "red"
+    body = Text()
+    body.append(heading, style=f"bold {color}")
+    if selected_step:
+        body.append("\nFull readiness not evaluated.")
+    elif ready and not interrupted:
+        body.append("\nContext is ready for Codex.")
+    else:
+        body.append("\nNot ready. Review the checks below.")
+
+    blocked = 0
+    for result in results:
+        if result.status == CheckStatus.FAILED and result.summary == "Prerequisites unavailable":
+            blocked += 1
+            continue
+        if result.status in (CheckStatus.FAILED, CheckStatus.WARNING) or (
+            selected_step and result.step_id == selected_step
+        ):
+            body.append(f"\n\n{result.label}\n", style="bold")
+            body.append(result.summary)
+            for detail in (result.diagnostic, result.remediation):
+                if detail:
+                    body.append(f"\n{detail}")
+    if blocked:
+        body.append(f"\n\n{blocked} checks blocked by failed prerequisites.", style="dim")
+
+    if ready and not interrupted:
+        hooks = next((r for r in results if r.step_id == "codex_hooks"), None)
+        hooks_installed = bool(
+            hooks and hooks.status == CheckStatus.PASSED and not hooks.skip_reason
+        )
+        if not hooks_installed:
+            body.append("\nAutomatic capture is disabled; hooks were not installed.", style="yellow")
+        if no_history:
+            body.append("\nExisting history was skipped (--no-history).", style="yellow")
+        body.append("\n\nGet started\n", style="bold")
+        actions = ["Open a new Codex session."]
+        if hooks_installed:
+            actions.append("Review and approve the Context hooks in /hooks.")
+        actions.append(
+            'Say: “Remember that this project uses pytest.”'
+            if no_history
+            else 'Ask: “What have we worked on over the last few days?”'
+        )
+        body.append("\n".join(f"  {number}. {action}" for number, action in enumerate(actions, 1)))
+
+    body.append("\n\nUseful commands\n", style="bold")
+    body.append("  blc status", style="cyan")
+    body.append("     Check readiness\n")
+    body.append("  blc doctor", style="cyan")
+    body.append("     Diagnose problems")
+    if ready and not interrupted:
+        body.append(
+            "\n\nConversation memory: 7 days\nSaved notes and tagged handoffs persist.",
+            style="dim",
+        )
+    if not styled:
+        return body
+    return Align.center(
+        Panel(
+            body,
+            title=" Base Layer Context ",
+            title_align="left",
+            border_style="bright_cyan" if success and not interrupted else "red",
+            padding=(1, 2),
+            width=max(8, min(COMPLETION_WIDTH, console.width - 4)),
+        ),
+        pad=False,
+    )
 
 
 def read_navigation_key():
@@ -85,19 +170,14 @@ class InstallerForm:
 
     def __exit__(self, exc_type, exc, traceback):
         self.live.refresh()
-        final_render = self.render() if self.full_screen else None
-        if (
-            self.full_screen
-            and exc_type is None
-            and len(self.results) == len(self.steps)
-        ):
-            time.sleep(0.6)
         self.live.stop()
-        if final_render is not None:
-            # Rich's alternate screen is cleared when Live stops. Reprint the
-            # resolved checklist in the normal terminal buffer so failures and
-            # remediation remain available after the installer exits.
-            self.console.print(final_render)
+        if self.full_screen and exc_type is not None:
+            # Normal completion is rendered by the CLI after readiness is known.
+            # Exceptions bypass that path, but must still leave evidence behind.
+            self.console.print(render_install_completion(
+                self.console, self.results.values(), success=False, ready=False,
+                interrupted=True,
+            ))
 
     def start_step(self, step):
         self.active_step = step.step_id
@@ -369,11 +449,17 @@ class InstallerForm:
                 for result in self.results.values()
             )
             resolution.append(" — ")
+            skipped_or_warned = any(
+                result.status in (CheckStatus.SKIPPED, CheckStatus.WARNING)
+                or result.skip_reason
+                for result in self.results.values()
+            )
             resolution.append(
                 "Failed checks require attention."
                 if failures
+                else "Completed with skips or warnings." if skipped_or_warned
                 else "All checks passed.",
-                style="bold red" if failures else "bold green",
+                style="bold red" if failures else "bold yellow" if skipped_or_warned else "bold green",
             )
         content = [
             Text(self.operation, style="bold"),

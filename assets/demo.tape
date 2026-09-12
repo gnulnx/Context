@@ -35,5 +35,6 @@ Sleep 2500ms
 Enter
 
 # Hold the completed installer long enough to read before encoding.
-Wait+Screen@60s /Ready\./
+Wait+Screen@60s /✓ Installation complete/
+Wait+Line@60s /^>$/
 Sleep 3s

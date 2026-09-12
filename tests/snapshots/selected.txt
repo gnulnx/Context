@@ -1,12 +1,14 @@
 
  Base Layer Context - Persistent memory for coding agents
 
- ✓ Data directory initialized
-   Private directories, schema v1, and active ownership verified.
+✗ Selected step failed
+Full readiness not evaluated.
 
-   Prerequisite for selected step.
+Background service installed
+Check failed
+Background service unavailable in this test.
+Run blc doctor for diagnostics.
 
- ✗ Background service installed
-   Check failed
-
- Selected check failed. Not ready.
+Useful commands
+  blc status     Check readiness
+  blc doctor     Diagnose problems

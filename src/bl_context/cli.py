@@ -10,7 +10,7 @@ from .checks import CheckStatus, checks_succeeded, is_ready
 from .embedding import progress
 from .explore import explore
 from .history_index import progress as history_progress
-from .installer_ui import InstallerForm
+from .installer_ui import InstallerForm, render_install_completion
 from .installers import CODEX_PROVIDER, installer_for
 from .retrieval_cli import (
     context,
@@ -145,7 +145,7 @@ def report(
             "exit_code": 0 if success else 1,
             "checks": [r.to_dict() for r in results],
         }))
-    elif live_form is None:
+    elif live_form is None and command != "install":
         symbols = {
             CheckStatus.PASSED: ("✓", "green"),
             CheckStatus.FAILED: ("✗", "red"),
@@ -172,7 +172,12 @@ def report(
             ):
                 console.print(f"   {result.diagnostic}\n   {result.remediation}\n", markup=False)
     if not json_output:
-        if command == "uninstall" and success:
+        if command == "install":
+            console.print(render_install_completion(
+                console, results, success=success, ready=ready,
+                selected_step=step, no_history=no_history, styled=rich_ui,
+            ))
+        elif command == "uninstall" and success:
             console.print(" Uninstalled.")
         elif step:
             console.print(
@@ -186,19 +191,6 @@ def report(
                 if ready
                 else " Not ready."
             )
-            if ready and command == 'install':
-                console.print(
-                    '\n Try it in Codex:\n'
-                    '  1. Ask: What have we worked on over the last few days?\n'
-                    '  2. Say: Remember that the magic word is SomeMagicWord.\n'
-                    '     Open a new session and ask: What is the most recent magic word?\n'
-                    '  3. Ask: What did we decide about <topic>?\n'
-                    '  4. Say: Tag the current work with test-handoff.\n'
-                    '     In another session: Refresh context from tag test-handoff.\n\n'
-                    ' Automatic conversation memory lasts 7 days. Saved notes and tags persist.\n'
-                    ' Trust the Context handlers in /hooks to capture work automatically.',
-                    markup=False,
-                )
     ctx.exit(0 if success else 1)
 
 

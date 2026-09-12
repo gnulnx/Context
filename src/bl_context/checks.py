@@ -2,7 +2,7 @@
 
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
-from time import monotonic, sleep
+from time import monotonic
 
 from . import (
     codex_hooks,
@@ -257,38 +257,6 @@ class CodexHooksStep(Step):
                                diagnostic=str(exc), remediation='Review Context hooks in Codex /hooks, complete a new conversation, then run blc doctor --step codex_hooks.')
 
 
-class FinalizingStep(Step):
-    def install(self):
-        sleep(2.5)
-        paths = storage.locations()
-        with storage.locked(paths):
-            manifest = storage.read_manifest(paths)
-            manifest['installation_finalized'] = True
-            storage.atomic_manifest(paths, manifest)
-
-    def verify(self):
-        try:
-            storage.verify()
-            manifest = storage.read_manifest(storage.locations())
-            if not manifest.get('installation_finalized'):
-                raise RuntimeError('Installation has not completed finalization')
-            return CheckResult(
-                self.step_id,
-                self.label,
-                CheckStatus.PASSED,
-                "Installation complete.",
-            )
-        except Exception as exc:
-            return CheckResult(
-                self.step_id,
-                self.label,
-                CheckStatus.FAILED,
-                "Installation not finalized",
-                diagnostic=str(exc),
-                remediation="Run blc install codex.",
-            )
-
-
 @dataclass(frozen=True)
 class UninstallStep(Step):
     purge: bool = False
@@ -348,11 +316,6 @@ STEPS = (
         "Codex Hooks",
         prerequisites=("codex_mcp", "codex_skills"),
         optional=True,
-    ),
-    FinalizingStep(
-        "finalizing",
-        "Finalizing installation",
-        prerequisites=("history_retrieval", "codex_hooks"),
     ),
 )
 

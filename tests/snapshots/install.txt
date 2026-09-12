@@ -2,43 +2,21 @@
  Base Layer Context - Persistent memory for coding agents
 
  Checking cached model…
- ✓ Data directory initialized
-   Private directories, schema v1, and active ownership verified.
+✗ Installation incomplete
+Not ready. Review the checks below.
 
- ✗ Background service installed
-   Check failed
+Background service installed
+Check failed
+Background service unavailable in this test.
+Run blc doctor for diagnostics.
 
- ✗ Codex MCP registered
-   Prerequisites unavailable
+Embedding model available
+Check failed
+Model cache incomplete and HF_HUB_OFFLINE is set. Retry online to finish the download.
+Run blc doctor for diagnostics.
 
- ✓ Codex skills installed
-   Codex skill base-layer-context v0.3.0 content and ownership verified.
+6 checks blocked by failed prerequisites.
 
- ✗ Embedding model available
-   Check failed
-
-   Model cache incomplete and HF_HUB_OFFLINE is set. Retry online to finish the download.
-   Run blc doctor for diagnostics.
-
- ✓ Existing Codex sessions discovered
-   0 Codex sessions discovered; no sessions selected for indexing.
-
- ✗ Historical sessions indexed
-   Prerequisites unavailable
-
- ✗ Service healthy
-   Prerequisites unavailable
-
- ✗ MCP connection healthy
-   Prerequisites unavailable
-
- ✗ Historical memory retrieval verified
-   Prerequisites unavailable
-
- ✗ Codex Hooks
-   Prerequisites unavailable
-
- ✗ Finalizing installation
-   Prerequisites unavailable
-
- Not ready.
+Useful commands
+  blc status     Check readiness
+  blc doctor     Diagnose problems
