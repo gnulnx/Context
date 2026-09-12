@@ -1,10 +1,10 @@
 {
-  "environment": "Isolated HOME, Linux, real installed blctx entry point; cwd=/",
+  "environment": "Isolated HOME, Linux, real installed blc entry point; cwd=/",
   "preservation": "Original transcripts, unrelated config and unknown cache file preserved. Status/doctor snapshots unchanged.",
   "records": [
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -26,7 +26,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.003492991905659437,
             "skip_reason": null,
             "dependency": false
@@ -36,7 +36,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -58,7 +58,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.0033673830330371857,
             "skip_reason": null,
             "dependency": false
@@ -68,7 +68,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -101,7 +101,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -134,7 +134,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -166,7 +166,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -198,7 +198,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--json"
@@ -339,7 +339,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "uninstall",
         "codex",
         "--json"
@@ -370,7 +370,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -392,7 +392,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.0036726309917867184,
             "skip_reason": null,
             "dependency": false
@@ -402,7 +402,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -424,7 +424,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.004525430966168642,
             "skip_reason": null,
             "dependency": false
@@ -434,7 +434,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -467,7 +467,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",
@@ -500,7 +500,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -532,7 +532,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -564,7 +564,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--json"
@@ -705,7 +705,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "uninstall",
         "codex",
         "--json"
@@ -736,7 +736,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -758,7 +758,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.0038016950711607933,
             "skip_reason": null,
             "dependency": false
@@ -768,7 +768,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -790,7 +790,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "Context installation ownership is inactive.",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.0038445289246737957,
             "skip_reason": null,
             "dependency": false
@@ -800,7 +800,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "uninstall",
         "codex",
         "--purge",
@@ -832,7 +832,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "status",
         "--step",
         "data_directory",
@@ -854,7 +854,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.0036461222916841507,
             "skip_reason": null,
             "dependency": false
@@ -864,7 +864,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "doctor",
         "--step",
         "data_directory",
@@ -886,7 +886,7 @@
             "status": "failed",
             "summary": "Data installation unavailable",
             "diagnostic": "[Errno 2] No such file or directory: '/tmp/pytest-of-gnulnx/pytest-1684/test_real_cli_lifecycle0/.local/share/bl-context'",
-            "remediation": "Run blctx install codex --step data_directory; inspect ownership and permissions if it fails.",
+            "remediation": "Run blc install codex --step data_directory; inspect ownership and permissions if it fails.",
             "duration": 0.00394515972584486,
             "skip_reason": null,
             "dependency": false
@@ -896,7 +896,7 @@
     },
     {
       "command": [
-        "blctx",
+        "blc",
         "install",
         "codex",
         "--step",

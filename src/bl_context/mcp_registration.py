@@ -97,7 +97,7 @@ def verify():
     manifest = storage.read_manifest(paths)
     owned = manifest.get('mcp_registration')
     if not owned:
-        raise RuntimeError('Context MCP is not registered; run blctx install codex --step codex_mcp')
+        raise RuntimeError('Context MCP is not registered; run blc install codex --step codex_mcp')
     if str(root()) != owned['root']:
         raise RuntimeError('Current CODEX_HOME differs from the owned registration root')
     if config(Path(owned['root'])).get('mcp_servers', {}).get(NAME) != expected(paths, manifest):

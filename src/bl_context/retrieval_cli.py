@@ -37,7 +37,7 @@ def call(request):
             raise RuntimeError(result['error'])
         return result
     except (OSError, ValueError, RuntimeError) as exc:
-        raise click.ClickException(f'{exc}. Check blctx doctor --step background_service.') from exc
+        raise click.ClickException(f'{exc}. Check blc doctor --step background_service.') from exc
 
 
 def emit(result):

@@ -35,7 +35,7 @@ Issues = "https://github.com/gnulnx/Context/issues"
 where = ["src"]
 
 [project.scripts]
-blctx = "bl_context.cli:main"
+blc = "bl_context.cli:main"
 blctxd = "bl_context.daemon:main"
 blctx-mcp = "bl_context.mcp_server:main"
 

@@ -69,7 +69,7 @@ def test_real_systemd_lifecycle(tmp_path, monkeypatch):
             monkeypatch.setenv(key, value)
         else:
             monkeypatch.delenv(key, raising=False)
-    cli = str(Path(sys.executable).parent / 'blctx')
+    cli = str(Path(sys.executable).parent / 'blc')
     records = []
     sentinel = tmp_path / 'original-transcript'
     sentinel.write_text('preserve')
@@ -78,7 +78,7 @@ def test_real_systemd_lifecycle(tmp_path, monkeypatch):
         assert result.returncode == expected, result.stdout + result.stderr
         data = json.loads(result.stdout)
         assert data['ready'] is False
-        records.append({'command': ['blctx', *args, '--json'], 'exit_code': result.returncode, 'json': data})
+        records.append({'command': ['blc', *args, '--json'], 'exit_code': result.returncode, 'json': data})
         assert sentinel.read_text() == 'preserve'
     try:
         run(['status', '--step', 'background_service'], 1)

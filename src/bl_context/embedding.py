@@ -169,7 +169,7 @@ def download(path, size, sha, report):
             return
         except requests.RequestException:
             if attempt == 2:
-                raise RuntimeError("Model download interrupted. Rerun blctx install codex --step embedding_model to resume.") from None
+                raise RuntimeError("Model download interrupted. Rerun blc install codex --step embedding_model to resume.") from None
             time.sleep(2**attempt)
 
 
@@ -188,13 +188,13 @@ def verify_runtime(paths):
 def require_active(paths):
     manifest = storage.read_manifest(paths)
     if manifest["state"] != "active" or manifest.get("embedding_model") != CONFIG:
-        raise RuntimeError("Embedding model is not configured. Run blctx install codex --step embedding_model.")
+        raise RuntimeError("Embedding model is not configured. Run blc install codex --step embedding_model.")
 
 
 def check_files(paths):
     for name, (size, sha) in FILES.items():
         if not valid(directory(paths) / name, size, sha):
-            raise RuntimeError(f"Pinned model file missing or damaged: {name}. Rerun blctx install codex --step embedding_model.")
+            raise RuntimeError(f"Pinned model file missing or damaged: {name}. Rerun blc install codex --step embedding_model.")
 
 
 def install():

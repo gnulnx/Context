@@ -86,7 +86,7 @@ def explore(ctx, session, root, limit, start_line, view, details, json_output, n
         click.echo(f"Codex root: {root}\n{data['total_files']} transcript files; showing {len(data['files'])} newest.")
         for item in data['files']:
             click.echo(f"{'archived' if item['archived'] else 'active'}  {item['bytes']} bytes  {item['path']}")
-        click.echo('\nInspect a path: blctx explore /path/to/session.jsonl')
+        click.echo('\nInspect a path: blc explore /path/to/session.jsonl')
     elif view == 'preview':
         click.echo('INGESTION PREVIEW — proposed searchable text; nothing imported.')
         click.echo(f"{data['total_searchable_turns']} searchable turns in captured file; showing {len(data['turns'])} turns.")

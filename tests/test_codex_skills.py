@@ -12,9 +12,9 @@ from bl_context import codex_skills as skills
 from bl_context import storage
 
 
-def run_blctx(home, *args):
+def run_blc(home, *args):
     env = {**os.environ, 'HOME':str(home), 'CODEX_HOME':str(home/'.codex')}
-    return subprocess.run([str(Path(sys.executable).parent/'blctx'), *args, '--json'],
+    return subprocess.run([str(Path(sys.executable).parent/'blc'), *args, '--json'],
                           env=env, text=True, capture_output=True, timeout=30)
 
 
@@ -54,9 +54,9 @@ def test_codex_skill_red_green_uninstall_red_reinstall(tmp_path):
     config.write_text('# unrelated configuration\n')
     evidence = []
     def run(args, code):
-        result = run_blctx(tmp_path,*args)
+        result = run_blc(tmp_path,*args)
         assert result.returncode == code, result.stdout+result.stderr
-        evidence.append(dict(command=['blctx',*args,'--json'],exit_code=code,json=json.loads(result.stdout)))
+        evidence.append(dict(command=['blc',*args,'--json'],exit_code=code,json=json.loads(result.stdout)))
         assert sentinel.read_text() == 'keep'
         assert config.read_text() == '# unrelated configuration\n'
     run(['status','--step','codex_skills'],1)
