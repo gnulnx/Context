@@ -213,10 +213,12 @@ On macOS the defaults are:
 
 The same private directory and file permissions apply on both platforms. The LaunchAgent uses an absolute executable and explicitly pinned storage paths, so it works without your interactive shell's PATH. macOS may list the Python executable in **System Settings → General → Login Items & Extensions**; allow it to run in the background if prompted. Codex hook trust is a separate approval in `/hooks`.
 
+<details>
+<summary><b>Custom Paths & Environment Overrides (XDG / State)</b></summary>
 * Overrides: Both platforms respect absolute `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, and `XDG_STATE_HOME`, appending `bl-context/`. Relative XDG values use the platform defaults. `BLCTX_DATA_DIR`, `BLCTX_CONFIG_DIR`, `BLCTX_CACHE_DIR`, and `BLCTX_STATE_DIR` override exact directories; the installer uses these to pin native paths for child processes. All four locations must remain separate. On macOS, the LaunchAgent always lives in `~/Library/LaunchAgents` so it loads at login.
 * Long paths: macOS Unix socket paths are limited to 103 bytes. If your home/state path exceeds this, select a shorter private state location with `XDG_STATE_HOME` before installing and retain that override for CLI use.
 * Isolation: No sudo, no system-level daemon, no open network ports.
-
+</details>
 ---
 
 ## Documentation & Contributing
