@@ -3,9 +3,14 @@
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-tape="${repo_root}/assets/demo.tape"
-input="${repo_root}/assets/demo.mp4"
-output="${repo_root}/assets/demo.gif"
+demo_name="${1:-demo}"
+if [[ "$demo_name" != demo && "$demo_name" != recall ]]; then
+    echo "usage: $0 [demo|recall]" >&2
+    exit 1
+fi
+tape="${repo_root}/assets/${demo_name}.tape"
+input="${repo_root}/assets/${demo_name}.mp4"
+output="${repo_root}/assets/${demo_name}.gif"
 output_dir="$(dirname -- "$output")"
 
 # Preserve sharp colors and full frames; check the upload size before publishing
@@ -66,7 +71,7 @@ ffmpeg \
 size_bytes="$(wc -c < "$tmp_output")"
 if (( size_bytes >= max_bytes )); then
     echo "error: generated GIF is $size_bytes bytes; must be below $max_bytes bytes." >&2
-    echo "Previous GIF preserved. Lower GIF_FPS or shorten holds in assets/demo.tape and retry." >&2
+    echo "Previous GIF preserved. Lower GIF_FPS or shorten holds in $tape and retry." >&2
     exit 1
 fi
 
