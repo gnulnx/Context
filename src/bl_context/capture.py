@@ -75,7 +75,8 @@ def receive(event, installation_id, generation):
     if event['hook_event_name'] == 'SessionStart':
         context = (
             'Base Layer Context lifecycle binding (not historical transcript text). '
-            'For memory-dependent requests, search global Context before answering; do not guess. '
+            'For memory-dependent requests, retrieve global Context before answering; do not guess. '
+            'Use work_overview for recent projects/work, search_context for facts, and get_tag for explicit handoffs; usually one request suffices. '
             'Read-only recall does not require open_session and should omit the project filter unless the user explicitly asks for project-only results. '
             f'Before the first log_update only, call base-layer-context.open_session with binding_key={json.dumps(binding)} '
             f'and project={json.dumps(project)}. Reuse the returned Context session_id for later writes in this conversation. '

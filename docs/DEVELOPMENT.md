@@ -36,7 +36,7 @@ The onboarding CLI runs an ordered checklist of 11 distinct subsystem steps to e
 6. `session_discovery`: Inspects `$CODEX_HOME/sessions` and selects the newest 5 sessions.
 7. `history_index`: Indexes selected sessions into local SQLite and Qdrant vector storage.
 8. `service_health`: Verifies IPC communication and exclusive daemon database locks.
-9. `mcp_health`: Spawns stdio MCP subprocess, verifies 6 tools, and tests protocol round-trip.
+9. `mcp_health`: Spawns stdio MCP subprocess, verifies 8 tools, and tests protocol round-trip.
 10. `history_retrieval`: Runs end-to-end semantic search and context expansion through MCP.
 11. `codex_hooks`: Registers `SessionStart`, `Stop`, and `SessionEnd` hooks in `$CODEX_HOME/hooks.json`.
 
@@ -146,16 +146,57 @@ blc explore /path/to/session.jsonl --details --limit 5
 
 ## 6. MCP Protocol & Tool Specifications
 
-Base Layer Context exposes 6 tools over stdio MCP:
+Base Layer Context exposes 8 tools over stdio MCP. Each response has one JSON text content block and no duplicate `structuredContent`:
 
 | Tool | Mode | Parameters | Description |
 | :--- | :---: | :--- | :--- |
 | `context_status` | Read | None | Reports coverage, freshness, running jobs, and pending note embeddings. |
+| `work_overview` | Read | `since`, `until`, `project`, `limit`, `offset` | One representative evidence package per project; three days by default, pagination by project. |
+| `get_tag` | Read | `tag`, `limit`, `offset` | Exact case-sensitive global handoff lookup, newest first. |
 | `recent_context` | Read | `since`, `until`, `project`, `limit` (1–50), `offset` | Retrieves recent turns with source citations (defaults to last 72 hours). Global by default. |
 | `search_context` | Read | `query` (1–2000 chars), `since`, `until`, `project`, `limit`, `offset` | Hybrid semantic vector search with lexical fallback during synchronization. |
 | `get_context` | Read | `context_id`, `limit`, `offset`, `char_offset` | Expands a specific turn or message into full text with pagination. |
-| `open_session` | Write | `binding_key` (UUID), `project`, `parent_session_id` | Initializes or resumes an authored session binding. |
+| `open_session` | Write | `binding_key` (UUID), `project`, `parent_session_id`, optional `agent` | Initializes or resumes an authored session binding; producer is provenance only. |
 | `log_update` | Write | `session_id`, `update_id`, `text`, `tags`, `kind`, `authorship`, `source_text` | Persists an idempotent, tagged authored note to SQLite before async embedding. |
+
+All normal responses are limited to 24,000 serialized JSON bytes, including evidence, provenance, and coverage. The MCP wrapper stays below 48,000 bytes even after escaping that JSON. `context_status` reports compact counts; full operator diagnostics remain available explicitly through `blc index-status --details` or `blc index-status JOB_ID`. Do not feed full diagnostic output into normal recall.
+
+Overviews deduplicate repeated text and select up to three excerpts per project, preferring authored notes and final outcomes and spreading representatives across sessions. They are extractive, not generated summaries. Search merges a bounded window of lexical and semantic candidates before pagination, prefers exact relevant evidence, and orders equally relevant authored facts newest first. Semantic failures fall back to lexical recall. `candidate_limit_reached` requests refinement instead of claiming exhaustive search.
+
+Use `next_offset` to continue result pages. Search/overview excerpts retain exact character offsets and a `message_offset` for expansion with `get_context(limit=1)`. `next_char_offset` continues long messages. `coverage_incomplete`, omitted-project/item counts, and truncation flags describe limits before any external host truncation.
+
+Conversation retention is seven days across producers; authored memory is durable. The daemon prunes at startup and every minute when its write worker is available. Read filters enforce expiry immediately even while maintenance is queued. Vector tombstones survive interruption, and SQLite validates semantic results. Reimport skips expired conversation messages. Source files and stable session bindings are preserved. SQLite reuses freed pages; retention is not secure erasure or an immediate filesystem-size reduction. Unknown legacy timestamps receive one seven-day window on migration; imports use the source's first imported modification time when a message timestamp is unavailable. Appending to a transcript does not renew its old undated messages.
+
+### V1 acceptance and local review
+
+From a checkout of the PR branch:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pytest -q
+.venv/bin/python -m ruff check src tests
+
+# Real CPU embeddings, capture/restart, MCP, and vector expiry/reimport:
+BLCTX_INDEX_TEST=1 .venv/bin/python -m pytest -q
+```
+
+`tests/test_memory_v1.py` covers acceptance A–F: uneven project volume, latest saved values across sessions, focused LiDAR evidence, exact handoffs, oversized history/diagnostics/Unicode, and mixed Codex/Claude/Gemini provenance. The default suite starts a real isolated daemon and separate stdio clients, checks immediate persistence with no model, and measures the complete MCP result. The opt-in suite additionally checks actual vector deletion and reimport without resurrection. Tests isolate their storage and do not alter the installed user's memory.
+
+To review the product in your normal Codex installation:
+
+```bash
+uv tool install --python 3.11 --editable . --force
+blc install codex
+blc doctor
+blc overview --days 3
+```
+
+Keep the checkout and Python environment available to the background service. The installer upgrades the owned skill and restarts stale runtime code. Start a fresh Codex session so it discovers the new MCP tools and skill; review/trust Context handlers in `/hooks` if prompted.
+
+In that session, ask “What have we worked on over the last few days?”, then save “Remember that the magic word is Alpha.” Open a separate session in a different repository and ask “What is the most recent magic word?” Save Beta there and verify a third session recalls Beta. Repeat with an ordinary fact from your own work. After doing some work, say “Tag the current work with test-handoff”; from another session say “Refresh context from tag test-handoff.” Expect a compact handoff with the next step. `blc tag test-handoff` gives a direct CLI check.
+
+Installation initially imports five recent sessions; hooks capture subsequent work. Overview coverage describes representatives and may be partial. A fresh machine with no retained conversations should still install successfully, then demonstrate memory through explicit saves and new work. Claude/Gemini integrations are outside V1; mixed producer tests verify the shared store contract only.
 
 ---
 

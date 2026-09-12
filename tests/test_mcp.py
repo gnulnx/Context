@@ -96,7 +96,7 @@ def test_stdio_tools_and_daemon_failure(tmp_path):
             async with ClientSession(read, write) as client:
                 await client.initialize()
                 listing = await client.list_tools()
-                assert {t.name for t in listing.tools} == {'recent_context','search_context','get_context','context_status','open_session','log_update'}
+                assert {t.name for t in listing.tools} == {'recent_context','search_context','get_context','context_status','work_overview','get_tag','open_session','log_update'}
                 failed = await client.call_tool('context_status', {})
                 assert failed.isError
     asyncio.run(exercise())
@@ -160,7 +160,8 @@ def test_live_session_updates_over_stdio(tmp_path, install_embedding):
                 async def call(name, args):
                     response = await client.call_tool(name, args)
                     assert not response.isError, response
-                    return response.structuredContent
+                    assert response.structuredContent is None
+                    return json.loads(response.content[0].text)
                 args = {'binding_key':str(uuid.uuid4()), 'project':'/mcp-test'}
                 session = (await call('open_session',args))['session_id']
                 assert (await call('open_session',args))['session_id'] == session

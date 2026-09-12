@@ -31,6 +31,8 @@ def verify():
         if target:
             break
     if not target:
+        if recent.get('coverage', {}).get('messages') == 0:
+            return 'No retained conversations yet; new sessions and explicit saves are ready.'
         raise RuntimeError('No retrievable turn belongs to the five selected sessions')
 
     target_context, target_path, text = target

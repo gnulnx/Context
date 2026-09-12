@@ -7,26 +7,28 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, nullcontext
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from qdrant_client import QdrantClient, models
 from tokenizers import Tokenizer
 
-from . import capture, embedding, storage
+from . import capture, embedding, retrieval, storage
 from .embedding_runtime import load_files
 from .preview import preview
 
 MODEL = embedding.MODEL
 COLLECTION = 'context_v1'
 POLICY = 'preview-v2-visible-token384-overlap48'
-SELECTION = 'visible-progress-v2'
+SELECTION = 'visible-progress-v3-retention'
 QUERY_WORKERS = 3
 REPAIR_BATCH_SIZE = 512
 SEARCH_STOP_WORDS = {
     'and', 'are', 'did', 'for', 'from', 'has', 'have', 'how', 'into', 'is',
     'it', 'of', 'on', 'that', 'the', 'this', 'to', 'was', 'were', 'what',
     'when', 'where', 'which', 'who', 'why', 'with', 'you', 'your',
+    'most', 'recent', 'latest', 'current', 'currently', 'using', 'kind',
+    'our', 'we', 'know', 'about', 'does', 'can', 'please',
 }
 
 
@@ -88,6 +90,8 @@ class Index:
                 CREATE TABLE IF NOT EXISTS vector_deletes (
                     id TEXT PRIMARY KEY);
             ''')
+            if 'agent' not in {row[1] for row in db.execute('PRAGMA table_info(context_sessions)')}:
+                db.execute('ALTER TABLE context_sessions ADD COLUMN agent TEXT')
             # Upgrade provenance on indexes created before the MCP interface existed.
             migrated_chunks = 0
             for table in ('context_messages', 'context_chunks'):
@@ -141,10 +145,10 @@ class Index:
             with self.write_lock:
                 return self.open_session(request) if operation == 'open_session' else self.log_update(request)
         if operation == 'index_status':
-            result = self.status(request.get('job_id'))
-            result['capture'] = capture.status(self.paths)
-            return result
-        if operation in ('recent_context', 'get_context'):
+            if request.get('details'):
+                return self.status(request.get('job_id'))
+            return self.coverage()
+        if operation in ('recent_context', 'get_context', 'work_overview', 'get_tag'):
             return self.query(request)
         return self.query_executor.submit(self.query, request).result(timeout=30)
 
@@ -189,14 +193,78 @@ class Index:
                     'unknown_timestamps': db.execute('SELECT count(*) FROM context_messages WHERE timestamp IS NULL').fetchone()[0]}
 
     def coverage(self):
-        status = self.status()
-        sources = status.pop('sources')
-        status['jobs'] = [{k: job[k] for k in ('id', 'state', 'updated')} for job in status['jobs']]
-        status['source_count'] = len(sources)
-        status['changed_sources'] = sum(s['changed_since_index'] for s in sources)
-        status['missing_sources'] = sum(s['missing'] for s in sources)
-        status['partial_sources'] = sum(bool(s['report'].get('unclassified')) for s in sources)
-        return status
+        # Never materialize job results or per-source reports in normal recall.
+        with closing(self.connect()) as db:
+            sources = db.execute("""SELECT path,bytes,
+                json_extract(report,'$.source_mtime_ns') AS mtime,
+                json_extract(report,'$.selection') AS selection,
+                json_extract(report,'$.unclassified') AS unclassified
+                FROM indexed_sources""").fetchall()
+            jobs = db.execute("SELECT count(*) FROM ingest_jobs WHERE state IN ('queued','running')").fetchone()[0]
+            pending = db.execute("SELECT count(*) FROM authored_updates WHERE state!='indexed'").fetchone()[0]
+            deletes = db.execute('SELECT count(*) FROM vector_deletes').fetchone()[0]
+            counts = db.execute('SELECT count(*),min(timestamp),max(timestamp),sum(timestamp IS NULL) FROM context_messages').fetchone()
+            chunks = db.execute('SELECT count(*) FROM context_chunks').fetchone()[0]
+        missing = changed = 0
+        for source in sources:
+            try:
+                info = Path(source['path']).stat()
+                changed += bool(info.st_size != source['bytes'] or info.st_mtime_ns != source['mtime'] or source['selection'] != SELECTION)
+            except OSError:
+                missing += 1
+        partial = sum(bool(source['unclassified']) for source in sources)
+        capture_state = capture.status(self.paths)
+        dirty = self.dirty_revision() is not None
+        syncing = bool(dirty or jobs or pending or deletes or capture_state.get('pending'))
+        # Discovery describes initial coverage, not all history on the machine.
+        inventory = storage.read_manifest(self.paths).get('session_discovery', {})
+        indexed_paths = {source['path'] for source in sources}
+        unindexed = sum(item['path'] not in indexed_paths for item in inventory.get('selected_for_indexing', []))
+        initial_omitted = max(0, inventory.get('sessions', 0) - len(inventory.get('selected_for_indexing', [])))
+        return dict(index_state='syncing' if syncing else 'ready',
+                    query_mode='lexical_fallback' if dirty or not chunks else 'hybrid',
+                    coverage_state='partial' if partial or missing or unindexed or initial_omitted or capture_state.get('errors') else 'stale' if changed or syncing else 'current',
+                    scope='Indexed local evidence; not a claim of complete machine history.',
+                    initial_history_omitted=initial_omitted,
+                    source_count=len(sources), changed_sources=changed, missing_sources=missing,
+                    partial_sources=partial, unindexed_selected_sources=unindexed,
+                    jobs_pending=jobs, authored_updates_pending=pending, vector_deletes_pending=deletes,
+                    messages=counts[0], chunks=chunks, oldest_timestamp=counts[1], newest_timestamp=counts[2],
+                    unknown_timestamps=counts[3] or 0, capture=capture_state,
+                    retention_days=retrieval.RETENTION_DAYS, durable='Authored notes and tagged handoffs',
+                    conversation_cutoff=self.retention_cutoff())
+
+    @staticmethod
+    def retention_cutoff():
+        return (datetime.now(timezone.utc) - timedelta(days=retrieval.RETENTION_DAYS)).timestamp()
+
+    def prune(self):
+        """Expire conversation content across producers; keep explicit authored memory.
+
+        Runs on the writer executor. Deletion tombstones survive vector failures.
+        Original provider transcripts and stable session bindings are untouched.
+        """
+        cutoff = self.retention_cutoff()
+        with self.write_lock, closing(self.connect()) as db, db:
+            # Legacy records without time get one retention window from migration.
+            db.execute("""UPDATE context_messages SET document=json_set(document,'$.retention_timestamp',?)
+                WHERE timestamp IS NULL AND json_extract(document,'$.retention_timestamp') IS NULL""", (epoch(utcnow()),))
+            expired = """coalesce(json_extract(document,'$.retention'),
+                CASE WHEN json_extract(document,'$.source_type')='authored_update' THEN 'durable' ELSE 'conversation' END)!='durable'
+                AND coalesce(timestamp,json_extract(document,'$.retention_timestamp')) < ?"""
+            db.execute(f"""INSERT OR IGNORE INTO vector_deletes SELECT id FROM context_chunks
+                WHERE json_extract(document,'$.id') IN (SELECT id FROM context_messages WHERE {expired})""", (cutoff,))
+            db.execute(f"""DELETE FROM context_chunks WHERE json_extract(document,'$.id') IN
+                (SELECT id FROM context_messages WHERE {expired})""", (cutoff,))
+            removed = db.execute(f'DELETE FROM context_messages WHERE {expired}', (cutoff,)).rowcount
+            if removed:
+                db.execute("INSERT OR REPLACE INTO index_settings VALUES ('dirty',?)", (uuid.uuid4().hex,))
+            db.execute("DELETE FROM ingest_jobs WHERE state NOT IN ('queued','running') AND updated < ?", (datetime.fromtimestamp(cutoff, timezone.utc).isoformat(),))
+            if db.execute("SELECT 1 FROM sqlite_master WHERE name='capture_events'").fetchone():
+                db.execute('DELETE FROM capture_events WHERE processed IS NOT NULL AND received < ?', (cutoff,))
+        if removed and not self.stopping.is_set():
+            self.write_executor.submit(self.repair_vectors)
+        return removed
 
     def load_model(self):
         embedding.require_active(self.paths)
@@ -316,6 +384,7 @@ class Index:
         }
 
     def recover_background_work(self, pending_jobs):
+        self.prune()
         self.repair_vectors()
         self.retry_updates()
         for job_id in pending_jobs:
@@ -384,6 +453,11 @@ class Index:
             raise RuntimeError('Source changed during import; retry')
         with closing(self.connect()) as db:
             previous = db.execute('SELECT * FROM indexed_sources WHERE path=?', (str(path),)).fetchone()
+        # A growing file must not renew the age of old undated messages.
+        unknown_timestamp_epoch = (
+            json.loads(previous['report']).get('unknown_timestamp_epoch', before.st_mtime)
+            if previous else before.st_mtime
+        )
         if previous and context_session_id is None:
             context_session_id = json.loads(previous['report']).get('context_session_id')
         if previous and previous['digest'] == fingerprint and json.loads(previous['report']).get('capture_generation') == capture_generation and json.loads(previous['report']).get('selection') == SELECTION:
@@ -412,8 +486,12 @@ class Index:
                     timestamp = epoch(record['timestamp'])
                 except (ValueError, TypeError):
                     timestamp = None
+                retention_timestamp = timestamp if timestamp is not None else unknown_timestamp_epoch
+                if retention_timestamp < self.retention_cutoff():
+                    continue
                 doc = {'id': identifier, 'context_id': context_id, 'session_id': session_id,
-                       'source_type': 'codex_transcript', 'source_session_id': session_id,
+                       'source_type': 'codex_transcript', 'source_session_id': session_id, 'agent': 'codex',
+                       'retention': 'conversation', 'retention_timestamp': retention_timestamp,
                        'context_session_id': context_session_id,
                        'turn_id': turn['turn_id'], 'project': turn['project'],
                        'timestamp': record['timestamp'], 'timestamp_epoch': timestamp,
@@ -452,6 +530,7 @@ class Index:
                 points.append(models.PointStruct(id=chunk['id'], vector=values, payload=chunk['document']))
             vectors.upsert(COLLECTION, points)
         report = {'path': str(path), 'session_id': session_id, 'messages': len(messages), 'chunks': len(chunks),
+                  'unknown_timestamp_epoch': unknown_timestamp_epoch,
                   'snapshot_bytes': size, 'source_mtime_ns': before.st_mtime_ns, 'unclassified': data['counts'].get('unclassified', 0),
                   'counts': data['counts'], 'unchanged': False, 'capture_generation': capture_generation, 'context_session_id': context_session_id, 'selection': SELECTION}
         with (storage.locked(self.paths) if capture_generation else nullcontext()):
@@ -513,18 +592,23 @@ class Index:
         if parent is not None:
             parent = self.identifier(parent)
         project = request.get('project')
+        agent = request.get('agent')
+        if agent is not None and (not isinstance(agent, str) or not agent.strip() or len(agent) > 64):
+            raise ValueError('agent must contain 1..64 characters')
         if project is not None and (not isinstance(project, str) or not project or len(project) > 4096):
             raise ValueError('project must be a nonempty string of at most 4096 characters')
         with closing(self.connect()) as db, db:
             row = db.execute('SELECT * FROM context_sessions WHERE binding_key=?', (binding,)).fetchone()
             if row:
-                if row['project'] != project or row['parent_session_id'] != parent:
+                if row['project'] != project or row['parent_session_id'] != parent or (agent is not None and row['agent'] not in (None, agent)):
                     raise ValueError('Binding already belongs to a session with different metadata')
+                if agent is not None and row['agent'] is None:
+                    db.execute('UPDATE context_sessions SET agent=? WHERE id=?', (agent, row['id']))
                 return {'session_id': row['id'], 'created_at': row['created'], 'reused': True}
             if parent and not db.execute('SELECT 1 FROM context_sessions WHERE id=?', (parent,)).fetchone():
                 raise ValueError('Unknown parent Context session')
             identifier, created = str(uuid.uuid4()), utcnow()
-            db.execute('INSERT INTO context_sessions VALUES (?,?,?,?,?)', (identifier, binding, project, parent, created))
+            db.execute('INSERT INTO context_sessions VALUES (?,?,?,?,?,?)', (identifier, binding, project, parent, created, agent))
         return {'session_id': identifier, 'created_at': created, 'reused': False}
 
     def log_update(self, request):
@@ -557,7 +641,7 @@ class Index:
             if not previous:
                 now = utcnow()
                 doc = dict(id=identifier, context_id=identifier, context_session_id=session,
-                           source_type='authored_update', source={'update_id': identifier},
+                           source_type='authored_update', agent=owner['agent'], retention='durable', source={'update_id': identifier},
                            timestamp=now, timestamp_epoch=epoch(now), project=owner['project'],
                            role='assistant', phase=None, text=text, tags=sorted(set(tags)),
                            kind=kind, authorship=authorship, source_text=source_text, decision='index')
@@ -641,7 +725,7 @@ class Index:
     def lexical_terms(query):
         terms = []
         for term in re.findall(r"[\w-]+", query.casefold()):
-            if len(term) < 3 or term in SEARCH_STOP_WORDS or term in terms:
+            if len(term) < 2 or term in SEARCH_STOP_WORDS or term in terms:
                 continue
             terms.append(term)
         return terms or [query.casefold().strip()]
@@ -664,7 +748,7 @@ class Index:
                   AND json_extract(document,'$.decision')='index'
                   AND ({matches})
                 ORDER BY lexical_score DESC, source_rank DESC,
-                         timestamp DESC, position DESC
+                         timestamp DESC, position DESC, id
                 LIMIT ? OFFSET ?''',
             (*terms, *params, *terms, limit + 1, offset),
         ).fetchall()
@@ -688,14 +772,19 @@ class Index:
         offset = request.get('offset', 0)
         if type(limit) is not int or not 1 <= limit <= 50 or type(offset) is not int or not 0 <= offset <= 100000:
             raise ValueError('limit must be 1..50 and offset 0..100000')
-        if operation not in ('recent_context', 'search_context', 'get_context'):
+        if operation not in ('recent_context', 'search_context', 'get_context', 'work_overview', 'get_tag'):
             raise ValueError('Unknown operation')
         char_offset = request.get('char_offset', 0)
         if type(char_offset) is not int or char_offset < 0 or (char_offset and (operation != 'get_context' or limit != 1)):
             raise ValueError('char_offset requires get_context with limit=1')
         if request.get('since') and request.get('until') and epoch(request['since']) >= epoch(request['until']):
             raise ValueError('since must be earlier than until')
-        clauses, params = [], []
+        clauses = ["""(coalesce(json_extract(document,'$.retention'),
+            CASE WHEN json_extract(document,'$.source_type')='authored_update' THEN 'durable' ELSE 'conversation' END)='durable'
+            OR coalesce(timestamp,json_extract(document,'$.retention_timestamp'),?) >= ?)"""]
+        params = [epoch(utcnow()), self.retention_cutoff()]
+        if operation in ('recent_context', 'work_overview') and not request.get('since'):
+            request = {**request, 'since': (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()}
         for name, comparison in [('since', '>='), ('until', '<')]:
             if request.get(name):
                 clauses.append(f'timestamp {comparison} ?')
@@ -704,10 +793,53 @@ class Index:
             clauses.append('project=?')
             params.append(request['project'])
         where = ' AND '.join(clauses) or '1'
+        terms = []
+        metadata = {}
+        quality = """CASE WHEN json_extract(document,'$.source_type')='authored_update'
+            AND json_extract(document,'$.kind') IN ('decision','note') THEN 4
+            WHEN json_extract(document,'$.source_type')='authored_update' THEN 3
+            WHEN json_extract(document,'$.phase')='final_answer' THEN 2
+            WHEN json_extract(document,'$.role')='user' THEN 1 ELSE 0 END"""
         with closing(self.connect()) as db:
             if operation == 'get_context':
-                rows = db.execute('SELECT document FROM context_messages WHERE context_id=? ORDER BY position LIMIT ? OFFSET ?', (request.get('context_id'), limit+1, offset)).fetchall()
+                rows = db.execute(f'SELECT document FROM context_messages WHERE context_id=? AND {where} ORDER BY position,id LIMIT ? OFFSET ?', (request.get('context_id'), *params, limit+1, offset)).fetchall()
                 documents = [json.loads(r[0]) for r in rows]
+            elif operation == 'get_tag':
+                tag = request.get('tag')
+                if not isinstance(tag, str) or not tag.strip() or len(tag) > 64:
+                    raise ValueError('tag must contain 1..64 characters')
+                rows = db.execute(f"""SELECT document FROM context_messages WHERE {where}
+                    AND json_extract(document,'$.decision')='index'
+                    AND EXISTS (SELECT 1 FROM json_each(document,'$.tags') WHERE value=?)
+                    ORDER BY timestamp DESC,id LIMIT ? OFFSET ?""", (*params, tag, limit+1, offset)).fetchall()
+                documents = [json.loads(r[0]) for r in rows]
+                metadata.update(tag=tag, ordering='newest_first', tag_semantics='Exact, case-sensitive global handle; newest handoff first.')
+            elif operation == 'work_overview':
+                projects = db.execute(f"""SELECT project,count(*) AS count,max(timestamp) AS latest,
+                    max({quality}) AS quality FROM context_messages
+                    WHERE {where} AND json_extract(document,'$.decision')='index'
+                    GROUP BY project ORDER BY quality DESC,latest DESC,project LIMIT ? OFFSET ?""", (*params, limit+1, offset)).fetchall()
+                total = db.execute(f"SELECT count(*) FROM (SELECT project FROM context_messages WHERE {where} AND json_extract(document,'$.decision')='index' GROUP BY project)", params).fetchone()[0]
+                documents = []
+                for project in projects:
+                    # One representative per session before a second from any session.
+                    rows = db.execute(f"""WITH distinct_text AS (
+                        SELECT *,row_number() OVER (PARTITION BY json_extract(document,'$.text')
+                            ORDER BY ({quality}) DESC,timestamp DESC,id) AS repeated
+                        FROM context_messages WHERE {where} AND project IS ?
+                            AND json_extract(document,'$.decision')='index'),
+                        sessions AS (SELECT *,row_number() OVER (
+                            PARTITION BY coalesce(json_extract(document,'$.context_session_id'),
+                                json_extract(document,'$.source_session_id'),context_id)
+                            ORDER BY ({quality}) DESC,timestamp DESC,id) AS session_rank
+                            FROM distinct_text WHERE repeated=1)
+                        SELECT document FROM sessions ORDER BY session_rank,({quality}) DESC,timestamp DESC,id LIMIT 3""", (*params, project['project'])).fetchall()
+                    documents.append(dict(project=project['project'], latest_timestamp=project['latest'],
+                                          items=[json.loads(row[0]) for row in rows],
+                                          items_omitted=max(0, project['count']-len(rows))))
+                metadata.update(total_projects=total, pagination_unit='project',
+                                selection='Extractive representatives: authored notes, final outcomes, distinct sessions.',
+                                since=request.get('since'), until=request.get('until'))
             elif operation == 'recent_context':
                 # Only searchable messages earn a turn a place in recent results.
                 rows = db.execute(f'''SELECT context_id, max(timestamp) AS latest FROM context_messages
@@ -715,15 +847,21 @@ class Index:
                     GROUP BY context_id ORDER BY latest DESC, context_id LIMIT ? OFFSET ?''', (*params, limit+1, offset)).fetchall()
                 documents = []
                 for row in rows:
-                    messages = db.execute(f"SELECT document FROM context_messages WHERE context_id=? AND {where} AND json_extract(document,'$.decision')='index' ORDER BY position LIMIT 21", (row['context_id'], *params)).fetchall()
-                    documents.append({'context_id': row['context_id'], 'latest_timestamp': row['latest'], 'messages': [json.loads(m[0]) for m in messages[:20]], 'messages_truncated': len(messages) > 20})
+                    messages = db.execute(f"SELECT document FROM context_messages WHERE context_id=? AND {where} AND json_extract(document,'$.decision')='index' ORDER BY ({quality}) DESC,position DESC,id LIMIT 4", (row['context_id'], *params)).fetchall()
+                    documents.append({'context_id': row['context_id'], 'latest_timestamp': row['latest'], 'messages': [json.loads(m[0]) for m in messages[:3]], 'messages_truncated': len(messages) > 3})
             else:
                 query = request.get('query')
                 if not isinstance(query, str) or not query.strip() or len(query) > 2000:
                     raise ValueError('Query must contain 1..2000 characters')
-                documents = self.lexical_search(
-                    db, query, where, params, limit, offset
-                )
+                terms = self.lexical_terms(query)
+                # Merge a stable candidate window before paginating, so semantic
+                # matches are not appended behind an already-full lexical page.
+                candidate_limit = 200
+                lexical = self.lexical_search(db, query, where, params, candidate_limit, 0)
+                documents = lexical[:candidate_limit]
+                ranks = {doc['id']: 1/(60+i) for i, doc in enumerate(documents)}
+                semantic_ids = set()
+                points = []
                 dirty = self.dirty_revision() is not None
                 filters = []
                 if request.get('project'):
@@ -732,55 +870,76 @@ class Index:
                     bounds = models.Range(gte=epoch(request.get('since')), lt=epoch(request.get('until')))
                     filters.append(models.FieldCondition(key='timestamp_epoch', range=bounds))
                 if not dirty and db.execute('SELECT 1 FROM context_chunks LIMIT 1').fetchone():
-                    vector = next(self.load_model().query_embed(query)).tolist()
-                    points = self.open_vectors().query_points(
-                        COLLECTION,
-                        query=vector,
-                        query_filter=models.Filter(must=filters) if filters else None,
-                        limit=limit + 1,
-                        offset=offset,
-                    ).points
+                    try:
+                        vector = next(self.load_model().query_embed(query)).tolist()
+                        points = self.open_vectors().query_points(
+                            COLLECTION, query=vector,
+                            query_filter=models.Filter(must=filters) if filters else None,
+                            limit=candidate_limit,
+                        ).points
+                    except Exception:
+                        points = []
+                        metadata['semantic_unavailable'] = True
                     seen = {document.get('id') for document in documents}
-                    documents.extend(
-                        {
-                            **point.payload,
-                            'score': point.score,
-                            'retrieval_mode': 'semantic',
-                        }
-                        for point in points
-                        if point.payload.get('id') not in seen
-                    )
+                    for point in points:
+                        identifier = point.payload.get('id')
+                        if identifier in semantic_ids:
+                            continue
+                        # SQLite remains authoritative during pruning and aliasing.
+                        row = db.execute(f"SELECT document FROM context_messages WHERE id=? AND {where} AND json_extract(document,'$.decision')='index'", (identifier, *params)).fetchone()
+                        if not row:
+                            continue
+                        semantic_ids.add(identifier)
+                        ranks[identifier] = ranks.get(identifier, 0) + 1/(60+len(semantic_ids))
+                        if identifier not in seen:
+                            document = json.loads(row[0])
+                            document.update(score=point.score, retrieval_mode='semantic')
+                            documents.append(document)
+                            seen.add(identifier)
+                def ranking(document):
+                    exact = document.get('retrieval_mode') == 'lexical' and document.get('score') == 1
+                    return (exact, document.get('source_type') == 'authored_update' if exact else False,
+                            document.get('timestamp_epoch') or 0 if exact else ranks[document['id']],
+                            ranks[document['id']])
+                documents.sort(key=ranking, reverse=True)
+                metadata.update(candidate_limit=candidate_limit,
+                                candidate_limit_reached=len(lexical) > candidate_limit or len(points) >= candidate_limit,
+                                ordering='Relevance first; newest equally relevant authored evidence first.')
+                documents = documents[offset:offset+limit+1]
         with closing(self.connect()) as db:
             def attach(document):
-                for message in document.get('messages', []):
+                for message in document.get('messages', document.get('items', [])):
                     attach(message)
+                if document.get('id'):
+                    position = db.execute('SELECT position FROM context_messages WHERE id=?', (document['id'],)).fetchone()
+                    if position:
+                        document['message_offset'] = db.execute(f'SELECT count(*) FROM context_messages WHERE context_id=? AND {clauses[0]} AND (position<? OR (position=? AND id<?))', (document['context_id'], *params[:2], position[0], position[0], document['id'])).fetchone()[0]
                 if document.get('source_type') == 'authored_update':
-                    references = db.execute("SELECT document FROM context_messages WHERE json_extract(document,'$.duplicate_of')=? LIMIT 21", (document['id'],)).fetchall()
-                    document['source_references'] = [{'context_id':d['context_id'], 'timestamp':d.get('timestamp'), **d['source']} for r in references[:20] for d in [json.loads(r[0])]]
-                    document['source_references_truncated'] = len(references) > 20
+                    references = db.execute("SELECT document FROM context_messages WHERE json_extract(document,'$.duplicate_of')=? LIMIT 3", (document['id'],)).fetchall()
+                    document['source_references'] = [{'context_id':d['context_id'], 'timestamp':d.get('timestamp'), **d['source']} for r in references[:2] for d in [json.loads(r[0])]]
+                    document['source_references_truncated'] = len(references) > 2
             for document in documents:
                 attach(document)
         more = len(documents) > limit
         documents = documents[:limit]
-        # Bound text without silently representing excerpts as complete messages.
-        remaining = 24000
-        def bound(document):
-            nonlocal remaining
-            if 'messages' in document:
-                for message in document['messages']:
-                    bound(message)
-            if 'text' in document:
-                text = document['text']
-                document['text'] = text[char_offset:char_offset+remaining]
-                document['text_truncated'] = len(text) > char_offset+remaining
-                document['text_char_start'] = char_offset
-                document['text_char_end'] = char_offset + len(document['text'])
-                document['next_char_offset'] = document['text_char_end'] if document['text_truncated'] else None
-                remaining -= len(document['text'])
-        for document in documents:
-            bound(document)
-        return {'results': documents, 'has_more': more, 'next_offset': offset+limit if more else None,
-                'coverage': self.coverage(), 'text_budget': 24000}
+        def compact(document):
+            for key in ('messages', 'items'):
+                if key in document:
+                    result = {**document, key: [compact(item) for item in document[key]]}
+                    if retrieval.size(result.get('project')) > 3000:
+                        result['project'] = result['project'][:160]
+                        result['project_truncated'] = True
+                    return result
+            return retrieval.excerpt(document, char_offset=char_offset, terms=terms,
+                                     expansion=operation=='get_context', handoff=operation=='get_tag')
+        result = retrieval.page([compact(doc) for doc in documents], offset=offset,
+                                more=more, coverage=self.coverage(), **metadata)
+        if operation == 'work_overview':
+            result['omitted_projects'] = max(0, metadata['total_projects'] - offset - result['returned'])
+        if metadata.get('candidate_limit_reached') or metadata.get('semantic_unavailable'):
+            result['coverage_incomplete'] = True
+            result['refinement'] = 'Narrow the topic or time range for additional evidence.'
+        return result
 
     def close(self):
         self.stopping.set()

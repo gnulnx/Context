@@ -79,7 +79,7 @@ def test_skill_requires_global_recall_before_memory_dependent_answers():
     text = skills.source()
     assert 'questions about earlier sessions, remembered facts' in text
     assert 'single-machine global memory' in text
-    assert 'Recall tools do not require `open_session` first' in text
+    assert 'Reads do not require `open_session`' in text
     assert 'explicitly depends on prior sessions or saved memory' in text
     assert 'Never guess an answer that Context could verify' in text
     assert 'Omit `project` by default' in text

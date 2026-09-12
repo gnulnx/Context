@@ -155,7 +155,12 @@ def main():
         logging.info('Ready installation=%s pid=%s', args.installation_id, os.getpid())
         capture_future = None
         next_capture = 0
+        next_prune = 0
+        prune_future = None
         while not stopping:
+            if engine is not None and time.monotonic() >= next_prune and (prune_future is None or prune_future.done()):
+                next_prune = time.monotonic() + 60
+                prune_future = engine.write_executor.submit(engine.prune)
             if time.monotonic() >= next_capture and (capture_future is None or capture_future.done()):
                 next_capture = time.monotonic() + 2
                 with engine_lock:

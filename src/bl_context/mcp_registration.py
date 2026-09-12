@@ -17,6 +17,7 @@ from . import storage
 
 NAME = 'base-layer-context'
 TOOLS = {
+    'work_overview', 'get_tag',
     'recent_context',
     'search_context',
     'get_context',
@@ -126,12 +127,17 @@ async def probe_tool(configuration, name, arguments, error_log):
                     f'MCP tool contract mismatch: expected {sorted(TOOLS)}, got {sorted(names)}'
                 )
             response = await client.call_tool(name, arguments)
-            if response.isError or not isinstance(response.structuredContent, dict):
+            if response.isError:
                 detail = 'MCP tool returned an error'
                 if response.content:
                     detail = getattr(response.content[0], 'text', detail)
                 raise RuntimeError(detail)
-            return response.structuredContent
+            if len(response.content) != 1 or response.content[0].type != 'text':
+                raise RuntimeError('Expected one JSON text result from Context')
+            result = json.loads(response.content[0].text)
+            if not isinstance(result, dict):
+                raise RuntimeError('Expected a JSON object from Context')
+            return result
 
 
 def call_tool(name, arguments=None):
@@ -154,9 +160,9 @@ def health():
     verify()
     status = call_tool('context_status')
     if (
-        not isinstance(status.get('sources'), list)
+        type(status.get('source_count')) is not int
         or type(status.get('messages')) is not int
-        or type(status.get('chunks')) is not int
+        or status.get('coverage_state') not in ('current', 'stale', 'partial')
     ):
         raise RuntimeError('MCP context_status returned an invalid payload')
     return (

@@ -11,7 +11,7 @@ from contextlib import closing
 
 import pytest
 from click.testing import CliRunner
-from test_index import source
+from test_index import day_ago, source
 
 from bl_context import capture, codex_hooks, storage
 from bl_context.cli import main
@@ -39,7 +39,7 @@ def test_binding_duplicates_resume_fork_null_path_and_disconnect(tmp_path):
         outputs = list(workers.map(send,[event()]*8))
     assert all(o == outputs[0] for o in outputs)
     guidance = outputs[0]['hookSpecificOutput']['additionalContext']
-    assert 'search global Context before answering; do not guess' in guidance
+    assert 'retrieve global Context before answering; do not guess' in guidance
     assert 'Read-only recall does not require open_session' in guidance
     assert 'Before the first log_update only' in guidance
     assert outputs[0] == send(event(source='resume')) == send(event(source='compact'))
@@ -198,7 +198,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
     path = tmp_path/'live.jsonl'
     source(path, project='/project')
     progress = 'The rover battery integration now passes its electrical tests.'
-    rows = [dict(type='response_item',timestamp='2026-09-10T12:00:00Z',payload=dict(type='message',role='assistant',phase='commentary',content=[dict(type='output_text',text=progress)])),
+    rows = [dict(type='response_item',timestamp=day_ago()+'T12:00:00Z',payload=dict(type='message',role='assistant',phase='commentary',content=[dict(type='output_text',text=progress)])),
             dict(type='response_item',payload=dict(type='reasoning',text='PRIVATE THINKING SENTINEL'))]
     with path.open('a') as stream:
         stream.write('\n'.join(map(json.dumps,rows))+'\n')
@@ -236,7 +236,7 @@ def test_reconciliation_restart_and_visible_update_dedup(tmp_path, install_embed
             return original_embed(texts, **kwargs)
         model.passage_embed = counted
         with path.open('a') as stream:
-            stream.write(json.dumps(dict(type='response_item',timestamp='2026-09-10T12:01:00Z',payload=dict(type='message',role='assistant',phase='commentary',content=[dict(type='output_text',text='Final voltage calibration passed.')])) )+'\n')
+            stream.write(json.dumps(dict(type='response_item',timestamp=day_ago()+'T12:01:00Z',payload=dict(type='message',role='assistant',phase='commentary',content=[dict(type='output_text',text='Final voltage calibration passed.')])) )+'\n')
         engine.write_executor.submit(capture.reconcile,engine).result(timeout=120)
         assert engine.submit(dict(operation='search_context',query='voltage calibration'))['results']
         assert embedded == ['Final voltage calibration passed.']
