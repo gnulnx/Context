@@ -6,14 +6,16 @@
 
 ---
 
-## The Payoff: Immediate Agent Recall
 
-We meet you where you work. ***The terminal.***  And then stay out of your way.
+## We meet you where you work. 
+
+***The terminal.***  And then stay out of your way.
 
 ![Base Layer Context Installation Demo](assets/demo.gif)
 
-Once installed, your coding agent gains automatic, persistent context across all your projects.
+---
 
+## The Payoff: Immediate Agent Recall
 For example: Tell Codex a magic word in one session. Ask again in a fresh session and Base Layer Context brings the answer back:
 
 ![Two Codex sessions: say the magic word is Base, then recall it through Base Layer Context](assets/recall.gif)
