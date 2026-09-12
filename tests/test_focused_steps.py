@@ -163,6 +163,9 @@ def test_usage_and_output_options(command):
 
 def test_selected_snapshot(monkeypatch):
     monkeypatch.setenv('COLUMNS', '100')
+    def unavailable():
+        raise RuntimeError('Background service unavailable in this test.')
+    monkeypatch.setattr('bl_context.service.install', unavailable)
     result = CliRunner().invoke(main, ['install', 'codex', '--step', 'background_service', '--no-color'])
     assert result.exit_code == 1
     assert result.output == (Path(__file__).parent / 'snapshots/selected.txt').read_text()

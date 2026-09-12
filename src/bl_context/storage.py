@@ -286,6 +286,7 @@ def uninstall(purge=False):
         manifest['state'] = 'inactive'
         manifest.pop('embedding_model', None)
         manifest.pop('session_discovery', None)
+        # Remove the obsolete cosmetic finalization marker on upgrades.
         manifest.pop('installation_finalized', None)
         atomic_manifest(paths, manifest)
         if purge:

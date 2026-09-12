@@ -9,8 +9,12 @@ from io import StringIO
 import pytest
 from rich.console import Console
 
-from bl_context import checks, storage
-from bl_context.installer_ui import InstallerForm, read_navigation_key
+from bl_context import checks
+from bl_context.installer_ui import (
+    InstallerForm,
+    read_navigation_key,
+    render_install_completion,
+)
 from bl_context.installers import (
     CODEX_PROVIDER,
     CodexInstallerAdapter,
@@ -266,7 +270,7 @@ def test_completed_installer_makes_failure_state_explicit():
     assert "Failed checks require attention." in output.getvalue()
 
 
-def test_full_screen_installer_reprints_final_state_after_live_screen_closes(
+def test_interrupted_installer_preserves_failure_after_live_screen_closes(
     monkeypatch,
 ):
     output = StringIO()
@@ -282,11 +286,13 @@ def test_full_screen_installer_reprints_final_state_after_live_screen_closes(
     monkeypatch.setattr(form.live, "refresh", lambda: events.append("refresh"))
     monkeypatch.setattr(form.live, "stop", lambda: events.append("stop"))
 
-    form.__exit__(None, None, None)
+    form.__exit__(KeyboardInterrupt, KeyboardInterrupt(), None)
 
     assert events == ["refresh", "stop"]
     assert "Historical sessions indexed" in output.getvalue()
     assert "Recent Codex history is not indexed" in output.getvalue()
+    assert "Installation interrupted" in output.getvalue()
+    assert len(output.getvalue().splitlines()) < console.height
 
 
 @pytest.mark.parametrize(
@@ -408,13 +414,37 @@ def test_live_form_renders_skipped_hooks_as_green():
     assert "Hooks not installed." in rendered
 
 
-def test_finalizing_waits_and_records_completion(monkeypatch):
-    storage.install()
-    waits = []
-    monkeypatch.setattr(checks, "sleep", waits.append)
-    step = next(step for step in checks.STEPS if step.step_id == "finalizing")
+@pytest.mark.parametrize("width,height", [(80, 24), (160, 60), (40, 10)])
+def test_failed_completion_preserves_diagnostics_in_scrollback(width, height):
+    output = StringIO()
+    console = Console(file=output, width=width, height=height, force_terminal=False)
+    results = [checks.CheckResult(
+        "history_index", "Historical sessions indexed", checks.CheckStatus.FAILED,
+        "Recent Codex history is not indexed", diagnostic="Probe failed [literal].",
+        remediation="Run blc doctor --step history_index.",
+    )]
+    console.print(render_install_completion(console, results, success=False, ready=False))
 
-    step.install()
+    rendered = output.getvalue()
+    assert "Installation incomplete" in rendered
+    assert "Probe failed [literal]." in rendered
+    assert "history_index." in rendered
+    assert "Terminal resized" not in rendered
+    assert "Get started" not in rendered
+    assert "╭" in rendered.splitlines()[0]
+    assert "╰" in rendered.splitlines()[-1]
 
-    assert waits == [2.5]
-    assert step.verify().status == checks.CheckStatus.PASSED
+
+def test_skipped_history_is_not_reported_as_all_checks_passed():
+    output = StringIO()
+    console = Console(file=output, width=100, height=40, force_terminal=False)
+    form = InstallerForm(console, checks.STEPS)
+    for step in checks.STEPS:
+        form.results[step.step_id] = checks.CheckResult(
+            step.step_id, step.label,
+            checks.CheckStatus.SKIPPED if step.history else checks.CheckStatus.PASSED,
+            "Result", skip_reason="no_history" if step.history else None,
+        )
+    console.print(form.render())
+    assert "All checks passed" not in output.getvalue()
+    assert "Completed with skips or warnings" in output.getvalue()
