@@ -71,7 +71,7 @@ def index_command(session, root, wait):
         )
         deadline = time.monotonic() + 600
         while time.monotonic() < deadline:
-            result = call({'operation': 'index_status', 'job_id': result.get('job_id') or result['id']})
+            result = call({'operation': 'index_status', 'job_id': result.get('job_id') or result['id'], 'details': True})
             if result['state'] not in ('queued', 'running'):
                 break
             time.sleep(.5)
@@ -82,9 +82,10 @@ def index_command(session, root, wait):
 
 @click.command('index-status')
 @click.argument('job_id', required=False)
-def index_status(job_id):
+@click.option('--details', is_flag=True, help='Full operator diagnostics, including source reports and job results; may be large.')
+def index_status(job_id, details):
     """Show import coverage and freshness, or the state of one durable job."""
-    emit(call({'operation': 'index_status', 'job_id': job_id}))
+    emit(call({'operation': 'index_status', 'job_id': job_id, 'details': details or bool(job_id)}))
 
 
 def filters(function):
@@ -112,6 +113,24 @@ def recent(days, **options):
 def search(query, **options):
     """Search global local history, with optional project/time filters. Emits JSON."""
     emit(call({'operation': 'search_context', 'query': query, **options}))
+
+
+@click.command('overview')
+@filters
+@click.option('--days', type=click.IntRange(1, 36500), default=3)
+def overview(days, **options):
+    """Summarize recent work as representative evidence grouped by project."""
+    options['since'] = options['since'] or (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    emit(call({'operation': 'work_overview', **options}))
+
+
+@click.command('tag')
+@click.argument('tag')
+@click.option('--limit', type=click.IntRange(1, 50), default=5)
+@click.option('--offset', type=click.IntRange(0, 100000), default=0)
+def tag_context(tag, limit, offset):
+    """Retrieve a global tagged handoff, newest first."""
+    emit(call({'operation': 'get_tag', 'tag': tag, 'limit': limit, 'offset': offset}))
 
 
 @click.command('context')

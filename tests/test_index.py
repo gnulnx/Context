@@ -7,6 +7,7 @@ import threading
 import time
 import uuid
 from contextlib import closing
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,7 +18,12 @@ from bl_context.index import QUERY_WORKERS, Index, epoch
 from bl_context.service import identity
 
 
-def source(path, project='/project/a', text='We chose lithium batteries for the rover power supply.', day='2026-09-08'):
+def day_ago(days=0):
+    return (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
+
+
+def source(path, project='/project/a', text='We chose lithium batteries for the rover power supply.', day=None):
+    day = day or day_ago()
     rows = [
         {'type': 'session_meta', 'payload': {'id': path.stem, 'cwd': project}},
         {'type': 'event_msg', 'payload': {'type': 'task_started', 'turn_id': 'turn'}},
@@ -186,7 +192,7 @@ def test_recall_does_not_wait_for_a_busy_writer():
             str(uuid.uuid4()),
             '/project/a',
             'The magic word is Kaboose.',
-            '2026-09-10T12:00:00Z',
+            day_ago() + 'T12:00:00Z',
         )
         engine.set_dirty(True)
         started_at = time.monotonic()
@@ -290,7 +296,7 @@ def test_real_index_lifecycle(tmp_path, install_embedding):
     install_embedding()
     a, b = tmp_path/'a.jsonl', tmp_path/'b.jsonl'
     source(a)
-    source(b, '/project/b', 'The web interface uses a purple navigation sidebar.', '2026-09-09')
+    source(b, '/project/b', 'The web interface uses a purple navigation sidebar.', day_ago(1))
     before = a.read_bytes()
     engine = Index(paths)
     try:
@@ -302,7 +308,7 @@ def test_real_index_lifecycle(tmp_path, install_embedding):
         found = engine.submit({'operation':'search_context','query':'rover electrical power batteries','limit':5,'project':'/project/a'})
         assert found['results'] and all(r['project']=='/project/a' for r in found['results'])
         assert any('lithium' in r['text'] for r in found['results'])
-        recent = engine.submit({'operation':'recent_context','since':'2026-09-09','until':'2026-09-10'})
+        recent = engine.submit({'operation':'recent_context','since':day_ago(1),'until':day_ago()})
         assert len(recent['results']) == 1
         context = engine.submit({'operation':'get_context','context_id':found['results'][0]['context_id']})
         assert len(context['results']) == 2
@@ -347,9 +353,11 @@ def test_long_context_can_be_read_without_losing_tail(tmp_path):
         with closing(engine.connect()) as db, db:
             db.execute('INSERT INTO context_messages VALUES (?,?,?,?,?,?,?)', ('m','source','turn',1,None,None,json.dumps(document)))
         first = engine.submit({'operation':'get_context','context_id':'turn','limit':1})['results'][0]
-        assert first['text_truncated'] and first['next_char_offset'] == 24000
-        last = engine.submit({'operation':'get_context','context_id':'turn','limit':1,'char_offset':24000})['results'][0]
-        assert last['text'].endswith('THE END') and not last['text_truncated']
+        parts = [first['text']]
+        while first['next_char_offset'] is not None:
+            first = engine.submit({'operation':'get_context','context_id':'turn','limit':1,'char_offset':first['next_char_offset']})['results'][0]
+            parts.append(first['text'])
+        assert ''.join(parts) == document['text']
     finally:
         engine.close()
 
@@ -391,7 +399,7 @@ def test_daemon_replays_durable_jobs_and_serves_cli(tmp_path, install_embedding)
             time.sleep(.1)
         assert job['state'] == 'complete', job
         assert invoke('search','battery energy supply')['results']
-        assert invoke('recent','--since','2026-09-08','--until','2026-09-09')['results']
+        assert invoke('recent','--since',day_ago(),'--until',day_ago(-1))['results']
         result = invoke('index',str(transcript),'--wait')
         assert result['result']['files'][0]['unchanged']
         assert transcript.read_bytes() == original

@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Persistent, private memory for coding agents.</strong><br>
-  Never re-explain your codebase to your agent. Automatic, durable recall across sessions, machines, and restarts.
+  Recall recent work and saved decisions across sessions, projects, and restarts on your machine.
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@ We meet you where you work—the console—and then stay out of your way. Once i
 
 ![Base Layer Context Installation Demo](assets/demo.gif)
 
-When you return to your codebase after days or weeks away, your agent recalls recent work, decisions, and milestones with full cryptographic provenance:
+When you return to your codebase, your agent can retrieve recent work and durable saved decisions with source references:
 
 ![Codex Recall Preview](assets/codex-recall-preview.svg)
 
@@ -36,7 +36,7 @@ Base Layer Context bridges this gap with a lightweight, private, system-level me
 * 🧠 **Zero Manual Effort:** Automatically captures session starts, turn milestones, and completions via non-blocking lifecycle hooks.
 * 🔒 **100% Local & Private:** Embeddings run locally on your CPU with FastEmbed (`BAAI/bge-small-en`). Vectors stay on your SSD in Qdrant. Zero telemetry, zero external API calls.
 * ⚡ **Global Machine Scope:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
-* 📜 **Strict Provenance:** No hallucinated memories. Every retrieved passage links back to exact transcript timestamps, line offsets, and session IDs.
+* 📜 **Source References:** Transcript excerpts retain timestamps, source locations, and session IDs. Authored notes retain their IDs and attribution. Retrieved statements are evidence, not independent verification.
 * 🛡️ **Zero-Surprise Permissions:** Runs in your user session through systemd on Linux or a launchd LaunchAgent on macOS, with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
 
 ---
@@ -96,6 +96,22 @@ Agents can also persist durable, tagged authored notes at key project milestones
 
 Notes are committed to SQLite instantly and become immediately retrievable.
 
+Try these across fresh Codex sessions:
+
+1. Say: **“Remember that the magic word is SomeMagicWord.”** Open another session and ask **“What is the most recent magic word?”**
+2. Save a different value in another session, then ask again. The newer relevant statement should be returned first.
+3. After doing some work, say **“Tag the current work with test-handoff.”** In another session, say **“Refresh context from tag test-handoff.”** Your agent saves and retrieves a compact handoff with the goal, decisions, progress, and next step.
+
+Tags are exact, case-sensitive global handles. Projects and contributing agents are provenance, not memory silos. Codex is the supported integration in V1; Claude/Gemini integrations and cross-machine synchronization are not included.
+
+### What is retained
+
+Automatic conversation memory lasts **7 days**. Explicit memories, authored notes, and tagged handoff summaries are durable. Context prunes expired conversation content from its SQLite and vector indexes at startup and during background maintenance. Original Codex transcript files are unchanged. Retention settings are deferred to a later release.
+
+Installation backfills the five newest available sessions, retaining only conversation content within the seven-day window. Trusted hooks capture subsequent work. Recall reports partial or syncing coverage, including omitted initial history; it never promises a complete transcript archive.
+
+Normal recall returns compact evidence with a 24,000-byte JSON budget, including metadata and coverage. Project overviews represent multiple projects, factual search ranks relevant evidence, and tag lookup retrieves the newest matching handoff. Your agent can expand a relevant excerpt when necessary.
+
 ---
 
 ## How It Works: Local Privacy Architecture
@@ -108,8 +124,8 @@ Base Layer Context operates as an offline, single-writer daemon communicating ov
 
 1. **The CLI (`blc`)**: High-level onboarding, health diagnostics, manual search, and transcript exploration.
 2. **The User Daemon (`blctxd`)**: Single-writer daemon managing SQLite WAL and Qdrant local vector storage. Independent worker threads ensure queries never block during index synchronization.
-3. **The Stdio MCP Server**: Exposes 6 standard tools (`recent_context`, `search_context`, `get_context`, `context_status`, `open_session`, `log_update`) directly to Codex.
-4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) that enqueue transcript snapshots into SQLite in under 2ms without holding your conversation open.
+3. **The Stdio MCP Server**: Exposes 8 tools: `work_overview`, `search_context`, `get_tag`, `recent_context`, `get_context`, `context_status`, `open_session`, and `log_update`.
+4. **Lifecycle Hooks**: Three lightweight handlers (`SessionStart`, `Stop`, `SessionEnd`) enqueue transcript references without running embeddings. They allow up to one second for brief ownership-lock contention within a two-second hook deadline; prolonged contention is reported as a skipped capture.
 
 ---
 
@@ -147,6 +163,12 @@ Query your agent's memory directly from your terminal:
 ```bash
 # View recent turns across the last 3 days
 blc recent --days 3
+
+# Recent work grouped by project
+blc overview --days 3
+
+# Continue a saved handoff
+blc tag test-handoff
 
 # Semantic search across historical sessions
 blc search "why did we switch to batched inference?"

@@ -92,7 +92,7 @@ def test_install_reuses_a_valid_indexed_prefix(monkeypatch, tmp_path):
 
     history_index.install()
 
-    assert requests == [{"operation": "index_status"}]
+    assert requests == [{"operation": "index_status", "details": True}]
 
 
 def test_install_indexes_an_existing_session_missing_from_the_index(monkeypatch, tmp_path):
@@ -103,7 +103,7 @@ def test_install_indexes_an_existing_session_missing_from_the_index(monkeypatch,
 
     def call(request):
         requests.append(request)
-        if request == {"operation": "index_status"}:
+        if request == {"operation": "index_status", "details": True}:
             return {"sources": []}
         if request["operation"] == "index":
             return {"job_id": "job-1", "state": "queued"}

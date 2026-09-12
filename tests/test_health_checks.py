@@ -80,11 +80,11 @@ def test_mcp_health_validates_tool_status(monkeypatch):
     monkeypatch.setattr(
         mcp_registration,
         'call_tool',
-        lambda name: {'sources': [], 'messages': 4, 'chunks': 6},
+        lambda name: {'source_count': 0, 'messages': 4, 'chunks': 6, 'coverage_state': 'current'},
     )
 
     assert mcp_registration.health() == (
-        'MCP stdio initialized, 6 tools verified, and daemon round-trip '
+        'MCP stdio initialized, 8 tools verified, and daemon round-trip '
         'completed (4 messages).'
     )
 

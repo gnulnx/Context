@@ -68,9 +68,11 @@ def test_successful_install_exits_zero_and_invites_immediate_recall(monkeypatch)
     assert "✓ Codex Hooks" in result.output
     assert "Approve hooks on next Codex launch." in result.output
     assert (
-        "Ready. Launch Codex and ask it to summarize your recent sessions."
+        "Ready. Launch Codex and ask it to summarize your recent work."
         in result.output
     )
+    assert 'Remember that the magic word is SomeMagicWord' in result.output
+    assert 'Refresh context from tag test-handoff' in result.output
 
 
 @pytest.mark.parametrize("args", [

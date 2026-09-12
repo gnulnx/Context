@@ -9,7 +9,7 @@ from . import storage
 from .mcp_registration import config
 
 SKILL_NAME = 'base-layer-context'
-SKILL_VERSION = '0.2.0'
+SKILL_VERSION = '0.3.0'
 
 
 def source():

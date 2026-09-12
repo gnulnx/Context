@@ -42,7 +42,7 @@ def install():
         return
 
     emit("Indexing recent sessions", 0, total)
-    status = call({"operation": "index_status"})
+    status = call({"operation": "index_status", "details": True})
     indexed = {item["path"]: item for item in status.get("sources", [])}
     pending = [item["path"] for item in selected if not source_is_valid(item, indexed.get(item["path"]))]
     already_indexed = total - len(pending)
@@ -58,7 +58,7 @@ def install():
 
     deadline = time.monotonic() + INSTALL_TIMEOUT
     while time.monotonic() < deadline:
-        job = call({"operation": "index_status", "job_id": job_id})
+        job = call({"operation": "index_status", "job_id": job_id, "details": True})
         result = job.get("result", {})
         completed = already_indexed + len(result.get("files", [])) + len(
             result.get("failed", [])
@@ -126,7 +126,7 @@ def report():
     if not selected:
         return {"sessions": 0, "messages": 0, "chunks": 0, "unclassified": 0}
 
-    status = call({"operation": "index_status"})
+    status = call({"operation": "index_status", "details": True})
     indexed = {item["path"]: item for item in status.get("sources", [])}
     reports = []
     growing = 0
