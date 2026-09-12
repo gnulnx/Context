@@ -30,13 +30,14 @@ Tell Codex the magic word in one session. Ask again in a fresh session and Base 
 
 ## Why Base Layer Context?
 
-Coding agents suffer from **agent amnesia**. When a session ends, the context window vanishes. Manually copying summaries or repasting task descriptions is tedious and burns tokens.
+Coding agents suffer from **agent amnesia**. 
+Sessions end. Context disappears. Rebuilding that context manually wastes time and tokens.
 
 Base Layer Context bridges this gap with a lightweight, private, system-level memory daemon:
 
 * 🧠 **Zero Manual Effort:** Automatically captures session starts, turn milestones, and completions via non-blocking lifecycle hooks.
-* 🔒 **100% Local & Private:** Embeddings run locally on your CPU with FastEmbed (`BAAI/bge-small-en`). Vectors stay on your SSD in Qdrant. Zero telemetry, zero external API calls.
-* ⚡ **Global Machine Scope:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
+* 🔒 **100% Local & Private:** Your memory stays on your machine. No telemetry. No external API calls. Local embeddings and Qdrant handle retrieval entirely offline.
+* ⚡ **Works Across Projects:** Work from any folder or repository; your agent can recall related work across projects without rigid directory silos.
 * 📜 **Source References:** Transcript excerpts retain timestamps, source locations, and session IDs. Authored notes retain their IDs and attribution. Retrieved statements are evidence, not independent verification.
 * 🛡️ **Zero-Surprise Permissions:** Runs in your user session through systemd on Linux or a launchd LaunchAgent on macOS, with private mode `0700` directories and mode `0600` sockets. No root or sudo required.
 
@@ -88,7 +89,7 @@ Once onboarded, interact with your agent normally. When you need past context, s
 * *"What decisions were made regarding sensor calibration yesterday?"*
 * *"Review recent test failures and uncommitted experiments."*
 
-### Explicit Tagged Notes
+### Durable Notes & Tags.
 
 Agents can also persist durable, tagged authored notes at key project milestones:
 
