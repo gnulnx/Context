@@ -70,7 +70,8 @@ if (( size_bytes >= max_bytes )); then
     exit 1
 fi
 
-chmod 0644 -- "$tmp_output"
+# BSD/macOS chmod stops parsing options at the mode argument.
+chmod -- 0644 "$tmp_output"
 mv -f -- "$tmp_output" "$output"
 trap - EXIT
 
