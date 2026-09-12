@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+tape="${repo_root}/assets/demo.tape"
+input="${repo_root}/assets/demo.mp4"
+output="${repo_root}/assets/demo.gif"
+output_dir="$(dirname -- "$output")"
+
+# Six frames per second and a broad palette keep the full-canvas GIF below
+# 10 MiB without introducing the color fringing caused by the old 64-color,
+# downscaled conversion.
+fps="${GIF_FPS:-6}"
+colors="${GIF_COLORS:-192}"
+
+for command_name in vhs ffmpeg; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        echo "error: $command_name is required" >&2
+        exit 1
+    fi
+done
+
+if [[ ! -f "$tape" ]]; then
+    echo "error: tape not found: $tape" >&2
+    exit 1
+fi
+
+if [[ ! "$fps" =~ ^[1-9][0-9]*$ ]]; then
+    echo "error: GIF_FPS must be a positive integer" >&2
+    exit 1
+fi
+
+if [[ ! "$colors" =~ ^[0-9]+$ ]] || (( colors < 2 || colors > 256 )); then
+    echo "error: GIF_COLORS must be an integer from 2 through 256" >&2
+    exit 1
+fi
+
+tmp_output="$(mktemp --tmpdir="$output_dir" ".make-demo-gif.XXXXXX.gif")"
+trap 'rm -f -- "$tmp_output"' EXIT
+
+echo "Recording $tape with VHS..."
+(cd -- "$repo_root" && vhs --output "$input" "$tape")
+
+if [[ ! -s "$input" ]]; then
+    echo "error: VHS did not create $input" >&2
+    exit 1
+fi
+
+# Keep the MP4's native 1200x800 resolution and use a broad palette for sharp
+# colored text. Disabling transparency and frame offsets makes every GIF frame
+# self-contained, preventing stale glyph shadows between playback loops.
+ffmpeg \
+    -hide_banner \
+    -loglevel error \
+    -y \
+    -i "$input" \
+    -filter_complex \
+    "[0:v]fps=${fps},split[frames][palette_source];[palette_source]palettegen=stats_mode=full:max_colors=${colors}:reserve_transparent=0[palette];[frames][palette]paletteuse=dither=none:diff_mode=none" \
+    -an \
+    -gifflags -offsetting-transdiff \
+    -loop 0 \
+    "$tmp_output"
+
+chmod 0644 -- "$tmp_output"
+mv -f -- "$tmp_output" "$output"
+trap - EXIT
+
+size="$(du -h -- "$output" | cut -f1)"
+echo "Wrote $output ($size, native resolution, ${fps} fps, ${colors} colors, full opaque frames)"

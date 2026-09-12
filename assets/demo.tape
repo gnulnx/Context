@@ -1,16 +1,16 @@
-Output demo.gif
+Output demo.mp4
 
 Set Shell "bash"
 Set Theme "GitHub Dark"
 Set FontFamily "JetBrains Mono"
-Set FontSize 14
+Set FontSize 18
 Set Width 1200
-Set Height 675
+Set Height 800
 Set Padding 20
 Set WindowBar Colorful
 Set WindowBarSize 32
-Set Framerate 30
-Set CursorBlink false
+Set Framerate 60
+Set CursorBlink true
 
 # Reset the integration so every recording follows the complete install path.
 Hide
@@ -26,12 +26,12 @@ Show
 Set TypingSpeed 50ms
 Sleep 1s
 Type "blc install codex"
-Sleep 500ms
+Sleep 1500ms
 Enter
 
 # Let viewers read the optional hooks disclosure, then accept the default.
 Wait+Screen@60s /Automatic Codex capture/
-Sleep 2s
+Sleep 2500ms
 Enter
 
 # Hold the completed installer long enough to read before encoding.
