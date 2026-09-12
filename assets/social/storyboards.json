@@ -1,0 +1,379 @@
+{
+  "shots": {
+    "brand": {
+      "kind": "card",
+      "style": "brand",
+      "duration": 3.4
+    },
+    "new-session": {
+      "kind": "card",
+      "style": "new",
+      "duration": 1.3
+    },
+    "three-steps": {
+      "kind": "card",
+      "style": "steps",
+      "duration": 2.2
+    },
+    "end": {
+      "kind": "card",
+      "style": "end",
+      "duration": 3.4
+    },
+    "tell": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 6.6,
+      "end": 13.2,
+      "speed": 1.25,
+      "crop": [
+        20,
+        246,
+        680,
+        150
+      ],
+      "eyebrow": "01 / FIRST CONVERSATION",
+      "headline": "Tell it once.",
+      "subtitle": "The magic word is Base.",
+      "footer": "A real conversation with Codex."
+    },
+    "launch": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 13.8,
+      "end": 17.2,
+      "speed": 1.6,
+      "crop": [
+        804,
+        60,
+        776,
+        500
+      ],
+      "eyebrow": "02 / FRESH SESSION",
+      "headline": "Start fresh.",
+      "subtitle": "Open another Codex session.",
+      "footer": "Same machine. A new conversation."
+    },
+    "ask": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 17.2,
+      "end": 22.0,
+      "speed": 1.25,
+      "crop": [
+        804,
+        220,
+        776,
+        400
+      ],
+      "eyebrow": "02 / FRESH SESSION",
+      "headline": "Ask it again.",
+      "subtitle": "What was the magic word?",
+      "footer": "No reminder. No pasted history."
+    },
+    "retrieve": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 24.8,
+      "end": 31.6,
+      "speed": 1.6,
+      "crop": [
+        804,
+        230,
+        776,
+        540
+      ],
+      "eyebrow": "02 / FRESH SESSION",
+      "headline": "It knows where to look.",
+      "subtitle": "Codex searches Base Layer Context.",
+      "footer": "Your conversation, retrieved locally."
+    },
+    "answer": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 32.0,
+      "end": 35.0,
+      "speed": 1,
+      "crop": [
+        804,
+        444,
+        776,
+        320
+      ],
+      "eyebrow": "THE ANSWER",
+      "payoff": true,
+      "headline": "Base.",
+      "subtitle": "It remembered.",
+      "footer": "From the first conversation."
+    },
+    "trust": {
+      "kind": "demo",
+      "source": "recall.mp4",
+      "start": 4.0,
+      "end": 6.4,
+      "speed": 1,
+      "crop": [
+        20,
+        70,
+        770,
+        360
+      ],
+      "eyebrow": "ONE-TIME SETUP",
+      "headline": "Make it automatic.",
+      "subtitle": "Review and trust the local hooks.",
+      "footer": "You approve what runs on your machine."
+    },
+    "install-command": {
+      "kind": "demo",
+      "source": "demo.mp4",
+      "start": 0.2,
+      "end": 3.6,
+      "speed": 1.3,
+      "crop": [
+        10,
+        28,
+        970,
+        280
+      ],
+      "eyebrow": "01 / INSTALL",
+      "headline": "Install once.",
+      "subtitle": "One command sets up the integration.",
+      "footer": "blc install codex"
+    },
+    "install-progress": {
+      "kind": "demo",
+      "source": "demo.mp4",
+      "start": 3.6,
+      "end": 7.5,
+      "speed": 1.6,
+      "crop": [
+        0,
+        0,
+        1000,
+        620
+      ],
+      "eyebrow": "01 / INSTALL",
+      "headline": "Install once.",
+      "subtitle": "Local storage. Recall skill. Context server.",
+      "footer": "blc install codex"
+    },
+    "install-hooks": {
+      "kind": "demo",
+      "source": "demo.mp4",
+      "start": 7.5,
+      "end": 10.5,
+      "speed": 1.3,
+      "crop": [
+        0,
+        0,
+        1000,
+        620
+      ],
+      "eyebrow": "01 / INSTALL",
+      "headline": "Choose automatic capture.",
+      "subtitle": "Enable local conversation capture.",
+      "footer": "Review the hooks on the next Codex launch."
+    },
+    "install-complete": {
+      "kind": "demo",
+      "source": "demo.mp4",
+      "start": 10.5,
+      "end": 13.4,
+      "speed": 1.2,
+      "crop": [
+        0,
+        0,
+        1000,
+        620
+      ],
+      "eyebrow": "01 / INSTALL",
+      "headline": "Ready for Codex.",
+      "subtitle": "The integration is installed.",
+      "footer": "Now give it something to remember."
+    },
+    "magic-open": {
+      "kind": "card",
+      "style": "console-open",
+      "duration": 1.6
+    },
+    "magic-welcome": {
+      "start": 6.4,
+      "end": 6.9,
+      "speed": 0.25,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        20,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-tell": {
+      "start": 7.0,
+      "end": 13.2,
+      "speed": 1.2,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        20,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-launch": {
+      "start": 15.1,
+      "end": 17.0,
+      "speed": 1,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-ready": {
+      "start": 17.0,
+      "end": 18.0,
+      "speed": 0.5,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-ask": {
+      "start": 18.0,
+      "end": 22.4,
+      "speed": 1.1,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-search-start": {
+      "start": 22.4,
+      "end": 28.0,
+      "speed": 2.8,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-search-result": {
+      "start": 28.0,
+      "end": 31.6,
+      "speed": 1.2,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-answer": {
+      "start": 31.6,
+      "end": 36.2,
+      "speed": 1,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        804,
+        40,
+        776,
+        760
+      ]
+    },
+    "magic-end": {
+      "kind": "card",
+      "style": "console-end",
+      "duration": 7.0
+    }
+  },
+  "videos": [
+    {
+      "id": "01-magic-trick",
+      "title": "The magic trick",
+      "description": "Console cut: one opening line, full terminal panes, and a remembered answer.",
+      "shots": [
+        "magic-open",
+        "magic-welcome",
+        "magic-tell",
+        "magic-launch",
+        "magic-ready",
+        "magic-ask",
+        "magic-search-start",
+        "magic-search-result",
+        "magic-answer",
+        "magic-end"
+      ],
+      "revision": 3,
+      "poster_time": 0.7
+    },
+    {
+      "id": "02-brand-introduction",
+      "title": "The brand introduction",
+      "description": "A glowing title, a sliding promise, then real cross-session recall.",
+      "shots": [
+        "brand",
+        "trust",
+        "tell",
+        "new-session",
+        "launch",
+        "ask",
+        "retrieve",
+        "answer",
+        "end"
+      ]
+    },
+    {
+      "id": "03-install-tell-ask",
+      "title": "Install. Tell it. Ask again.",
+      "description": "The complete path from installation to a remembered answer.",
+      "shots": [
+        "three-steps",
+        "install-command",
+        "install-progress",
+        "install-hooks",
+        "install-complete",
+        "trust",
+        "tell",
+        "launch",
+        "ask",
+        "retrieve",
+        "answer",
+        "end"
+      ],
+      "overrides": {
+        "tell": {
+          "eyebrow": "02 / TELL IT"
+        },
+        "launch": {
+          "eyebrow": "03 / ASK AGAIN"
+        },
+        "ask": {
+          "eyebrow": "03 / ASK AGAIN"
+        },
+        "retrieve": {
+          "eyebrow": "03 / ASK AGAIN"
+        }
+      }
+    }
+  ]
+}

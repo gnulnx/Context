@@ -36,3 +36,12 @@ installed Codex model is used with low reasoning effort for a short demo.
 Recall uses 3 GIF frames per second by default and the same opaque-frame encoder
 and 10 MB limit as the installer. Override `GIF_FPS` or `GIF_COLORS` when needed.
 Both MP4 files retain the full recording frame rate; MP4 output is ignored by Git.
+
+To turn those recordings into the three separate social launch videos:
+
+```bash
+.venv/bin/python assets/make-social-videos
+```
+
+Run from the repository root. See [social/README.md](social/README.md) for the
+storyboards and preview/download page. This only reads the original recordings.

@@ -1,0 +1,355 @@
+#!/usr/bin/env python3
+"""Compose three social MP4s from the existing, real VHS recordings."""
+
+import argparse
+import hashlib
+import html
+import json
+import math
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+SIZE = 1080
+FPS = 30
+INK = "#f0f5ff"
+MUTED = "#99a9bc"
+ACCENT = "#73e4df"
+TERMINAL_BLUE = "#58a6ff"
+CONSOLE_MUTED = "#aaaaaa"
+REPO = Path(__file__).resolve().parent.parent
+ASSETS = REPO / "assets"
+
+
+def run(args):
+    subprocess.run(args, check=True)
+
+
+def probe(path):
+    return json.loads(subprocess.check_output([
+        "ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path),
+    ]))
+
+
+def font_file(family):
+    path = subprocess.check_output(["fc-match", "-f", "%{file}", family], text=True)
+    if not Path(path).is_file():
+        raise RuntimeError(f"Font unavailable: {family}")
+    return path
+
+
+def text_layer(text, size, font, color=INK, center=False):
+    layer = Image.new("RGBA", (SIZE, SIZE))
+    draw = ImageDraw.Draw(layer)
+    face = ImageFont.truetype(font, size)
+    # Shrink long headings to the same safe margin as the terminal.
+    while draw.textlength(text, font=face) > SIZE - 128:
+        size -= 1
+        face = ImageFont.truetype(font, size)
+    x = (SIZE - draw.textlength(text, font=face)) / 2 if center else 64
+    draw.text((x, 0), text, font=face, fill=color, anchor="lt")
+    return layer
+
+
+def wordmark_layer(font):
+    layer = Image.new("RGBA", (SIZE, SIZE))
+    draw = ImageDraw.Draw(layer)
+    face = ImageFont.truetype(font, 104)
+    x = (SIZE - draw.textlength("Base Layer Context", font=face)) / 2
+    for text, color in (("Base Layer ", INK), ("Context", TERMINAL_BLUE)):
+        draw.text((x, 0), text, font=face, fill=color, anchor="lt")
+        x += draw.textlength(text, font=face)
+    return layer
+
+
+def put(frame, layer, y, alpha=1, x=0):
+    if alpha <= 0:
+        return
+    if alpha < 1:
+        layer = layer.copy()
+        layer.putalpha(layer.getchannel("A").point(lambda value: int(value * alpha)))
+    frame.alpha_composite(layer, (round(x), round(y)))
+
+
+def ease(value):
+    return 1 - (1 - min(1, max(0, value))) ** 3
+
+
+def background():
+    y, x = np.mgrid[0:SIZE, 0:SIZE]
+    glow = np.exp(-(((x - 540) / 690) ** 2 + ((y - 420) / 550) ** 2) * 2)
+    pixels = np.stack([8 + glow * 8, 12 + glow * 18, 20 + glow * 25], axis=2).astype("uint8")
+    frame = Image.fromarray(pixels).convert("RGBA")
+    draw = ImageDraw.Draw(frame)
+    for coordinate in range(60, SIZE, 120):
+        draw.line((coordinate, 0, coordinate, SIZE), fill=(29, 43, 57, 65))
+        draw.line((0, coordinate, SIZE, coordinate), fill=(29, 43, 57, 65))
+    return frame
+
+
+def encoder(output):
+    return ["-an", "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+            "-pix_fmt", "yuv420p", "-r", str(FPS), "-threads", "4",
+            "-video_track_timescale", "15360", "-movflags", "+faststart", str(output)]
+
+
+def render_card(shot, output, fonts, base):
+    style = shot["style"]
+    heavy, regular, mono = fonts
+    plain = style.startswith("console-")
+    if plain:
+        base = Image.new("RGBA", (SIZE, SIZE), "#111111")
+    if style == "console-open":
+        layers = [("The magic word is Base.", 54, mono, INK, 496, 0)]
+    elif style == "console-end":
+        layers = [("Zero-config local agent memory that just works.",
+                   36, regular, CONSOLE_MUTED, 540, 0),
+                  ("github.com/gnulnx/Context", 34, mono, CONSOLE_MUTED, 640, 0)]
+    elif style == "brand":
+        layers = [
+            ("LOCAL MEMORY FOR CODING AGENTS", 23, mono, MUTED, 268, 0),
+            ("Base Layer", 108, heavy, INK, 348, 0.10),
+            ("Context", 138, heavy, ACCENT, 465, 0.22),
+            ("Install once. Your agent remembers.", 35, regular, INK, 664, 0.65),
+        ]
+    elif style == "new":
+        layers = [("New session.", 104, heavy, INK, 424, 0),
+                  ("The conversation starts over.", 34, regular, MUTED, 568, 0.12)]
+    elif style == "steps":
+        layers = [("BASE LAYER CONTEXT", 24, mono, ACCENT, 266, 0),
+                  ("Install.", 116, heavy, INK, 347, 0.08),
+                  ("Tell it.", 116, heavy, INK, 473, 0.24),
+                  ("Ask again.", 116, heavy, ACCENT, 599, 0.42)]
+    else:
+        layers = [("Base Layer Context", 82, heavy, INK, 318, 0),
+                  ("It remembers.", 96, heavy, ACCENT, 438, 0.18),
+                  ("Private memory. On your machine.", 34, regular, MUTED, 605, 0.40),
+                  ("github.com/gnulnx/Context", 34, mono, INK, 766, 0.55)]
+    rendered = [(text_layer(text, size, font, color, center=True), y, delay, color)
+                for text, size, font, color, y, delay in layers]
+    if style == "console-end":
+        rendered.insert(0, (wordmark_layer(heavy), 408, 0, INK))
+    glows = {i: layer.filter(ImageFilter.GaussianBlur(22))
+             for i, (layer, _, _, color) in enumerate(rendered) if color == ACCENT}
+    process = subprocess.Popen([
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "rawvideo",
+        "-pix_fmt", "rgb24", "-s", f"{SIZE}x{SIZE}", "-r", str(FPS), "-i", "-",
+        *encoder(output),
+    ], stdin=subprocess.PIPE)
+    try:
+        for number in range(round(shot["duration"] * FPS)):
+            t = number / FPS
+            frame = base.copy()
+            # Keep the closing message fully visible, including the final frame.
+            exit_alpha = (1 if style == "console-end" else
+                          min(1, max(0, (shot["duration"] - t) / 0.20)))
+            for i, (layer, y, delay, _) in enumerate(rendered):
+                entrance = 1 if plain else ease((t - delay) / 0.60)
+                alpha = entrance * exit_alpha
+                rise = 28 * (1 - entrance)
+                if i in glows:
+                    pulse = 0.34 + 0.28 * math.exp(-((t - 1.3) / 0.32) ** 2)
+                    put(frame, glows[i], y + rise, alpha * pulse)
+                put(frame, layer, y + rise, alpha)
+            process.stdin.write(frame.convert("RGB").tobytes())
+    finally:
+        process.stdin.close()
+    if process.wait():
+        raise RuntimeError(f"Card encoding failed: {style}")
+
+
+def demo_background(shot, fonts, base):
+    heavy, regular, mono = fonts
+    frame = base.copy()
+    draw = ImageDraw.Draw(frame)
+    draw.line((64, 97, 1016, 97), fill="#27384a", width=1)
+    draw.rounded_rectangle((64, 61, 75, 72), radius=3, fill=ACCENT)
+    put(frame, text_layer(shot["eyebrow"], 23, mono, ACCENT), 56, x=28)
+    payoff = shot.get("payoff")
+    put(frame, text_layer(shot["headline"], 144 if payoff else 72, heavy,
+                          ACCENT if payoff else INK), 135)
+    put(frame, text_layer(shot["subtitle"], 38 if payoff else 32, regular, MUTED),
+        308 if payoff else 240)
+    draw.rounded_rectangle((44, 371 if payoff else 331, 1036, 967), radius=18,
+                           fill="#101113", outline="#304657", width=2)
+    put(frame, text_layer(shot["footer"], 25, regular, MUTED), 1002)
+    return frame.convert("RGB")
+
+
+def render_demo(shot, output, fonts, base, work):
+    crop_x, crop_y, crop_w, crop_h = shot["crop"]
+    top = 390 if shot.get("payoff") else 350
+    available_h = 558 if shot.get("payoff") else 598
+    factor = min(952 / crop_w, available_h / crop_h)
+    width = int(crop_w * factor) // 2 * 2
+    height = int(crop_h * factor) // 2 * 2
+    x = (SIZE - width) // 2
+    y = top + (available_h - height) // 2
+    duration = round((shot["end"] - shot["start"]) / shot["speed"] * FPS) / FPS
+    backdrop = work / (output.stem + ".png")
+    demo_background(shot, fonts, base).save(backdrop)
+    graph = (
+        f"[1:v]setpts=(PTS-STARTPTS)/{shot['speed']},"
+        f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
+        f"scale={width}:{height}:flags=lanczos,setsar=1,fps={FPS},"
+        "eq=contrast=1.12:brightness=0.025,format=rgba,"
+        "fade=t=in:st=0:d=0.20:alpha=1[screen];"
+        f"[0:v][screen]overlay=x={x}:y='{y}+24*pow(max(0,1-t/0.3),3)':"
+        "shortest=1:format=auto,format=yuv420p[v]"
+    )
+    run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-filter_complex_threads", "2",
+         "-loop", "1", "-framerate", str(FPS), "-i", str(backdrop),
+         "-ss", str(shot["start"]), "-t", str(shot["end"] - shot["start"]),
+         "-i", str(ASSETS / shot["source"]), "-filter_complex", graph,
+         "-map", "[v]", "-t", str(duration), *encoder(output)])
+
+
+def render_console(shot, output):
+    """Keep the native pane at one steady size, including its title and history."""
+    crop_x, crop_y, crop_w, crop_h = shot["crop"]
+    duration = round((shot["end"] - shot["start"]) / shot["speed"] * FPS) / FPS
+    graph = (
+        f"setpts=(PTS-STARTPTS)/{shot['speed']},"
+        f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
+        f"scale={SIZE-64}:{SIZE-64}:force_original_aspect_ratio=decrease:"
+        "force_divisible_by=2:flags=lanczos,setsar=1,"
+        f"pad={SIZE}:{SIZE}:(ow-iw)/2:(oh-ih)/2:color=0x111111,"
+        f"fps={FPS},format=yuv420p"
+    )
+    run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-filter_threads", "2",
+         "-ss", str(shot["start"]), "-t", str(shot["end"] - shot["start"]),
+         "-i", str(ASSETS / shot["source"]), "-vf", graph,
+         "-t", str(duration), *encoder(output)])
+
+
+def validate(path):
+    metadata = probe(path)
+    video = next(s for s in metadata["streams"] if s["codec_type"] == "video")
+    audio = next(s for s in metadata["streams"] if s["codec_type"] == "audio")
+    assert (video["width"], video["height"]) == (SIZE, SIZE)
+    assert video["codec_name"] == "h264" and video["pix_fmt"] == "yuv420p"
+    assert video["avg_frame_rate"] == "30/1"
+    assert audio["codec_name"] == "aac"
+    assert 0 < float(metadata["format"]["duration"]) < 140
+    assert path.stat().st_size < 512_000_000
+    run(["ffmpeg", "-hide_banner", "-v", "error", "-xerror", "-i", str(path), "-f", "null", "-"])
+    return {"duration": round(float(metadata["format"]["duration"]), 2),
+            "bytes": path.stat().st_size, "width": SIZE, "height": SIZE, "fps": FPS}
+
+
+def gallery(videos, output):
+    cards = []
+    for video in videos:
+        identifier = video["id"]
+        revision = video.get("sha256", str(video["bytes"]))[:12]
+        cards.append(f'''<article><div class="heading"><span>{html.escape(identifier[:2])}</span>
+<h2>{html.escape(video['title'])}</h2></div><p>{html.escape(video['description'])}</p>
+<video controls playsinline preload="metadata" poster="{identifier}.jpg?v={revision}" src="{identifier}.mp4?v={revision}"></video>
+<div class="details"><span>{video['duration']:.1f}s · 1080 × 1080 · {video['bytes']/1e6:.1f} MB</span>
+<a href="{identifier}.mp4" download>Download MP4 ↗</a></div></article>''')
+    output.joinpath("index.html").write_text('''<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Base Layer Context · Launch films</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#090e15;color:#f0f5ff;font-family:system-ui,sans-serif}
+main{max-width:1440px;margin:auto;padding:64px 36px}.eyebrow{color:#73e4df;font-size:13px;letter-spacing:.18em}
+h1{font-size:clamp(32px,4vw,56px);letter-spacing:-.04em;margin:18px 0 12px}header>p{color:#a3b1c2;max-width:650px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:48px}.heading{display:flex;gap:12px;align-items:center}
+.heading span{font-family:monospace;color:#73e4df}h2{font-size:20px}article>p{color:#a3b1c2;font-size:14px;line-height:1.5;min-height:43px}
+video{width:100%;aspect-ratio:1;background:#10161f;border:1px solid #293b4b;border-radius:12px}.details{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px;margin-top:16px;color:#9dafc0}
+a{color:#73e4df;text-decoration:none}footer{color:#8597aa;margin-top:50px;font-size:14px;line-height:1.8}
+@media(max-width:950px){.grid{grid-template-columns:1fr;max-width:650px}main{padding:32px 20px}article>p{min-height:0}}
+</style><main><header><div class="eyebrow">BASE LAYER CONTEXT / LAUNCH FILMS</div><h1>Three ways to say “it remembers.”</h1>
+<p>Real Codex recordings, three opening hooks. Each video tells the story without sound. Preview them here, then download the MP4 you want to post.</p></header>
+<section class="grid">''' + "".join(cards) + '''</section><footer>Post text: <a href="https://github.com/gnulnx/Context">https://github.com/gnulnx/Context</a><br>
+Pauses are shortened in these edits. The terminal responses and Context calls come from the original recordings.</footer></main>
+<script>document.querySelectorAll('video').forEach(v=>v.addEventListener('play',()=>document.querySelectorAll('video').forEach(o=>{if(o!==v)o.pause()})))</script></html>''')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", choices=["01-magic-trick", "02-brand-introduction", "03-install-tell-ask"])
+    parser.add_argument("--output-dir", type=Path, default=ASSETS / "social/output")
+    args = parser.parse_args()
+    for command in ("ffmpeg", "ffprobe", "fc-match"):
+        if not shutil.which(command):
+            raise SystemExit(f"error: {command} is required")
+    story = json.loads((ASSETS / "social/storyboards.json").read_text())
+    videos = [v for v in story["videos"] if not args.only or v["id"] == args.only]
+    source_names = {story["shots"][name]["source"] for video in videos for name in video["shots"]
+                    if story["shots"][name]["kind"] in ("demo", "console")}
+    sources = {}
+    for name in source_names:
+        path = ASSETS / name
+        if not path.is_file():
+            raise SystemExit(f"error: {path} is missing; record the source demo first")
+        sources[name] = {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                         "duration": float(probe(path)["format"]["duration"])}
+    for video in videos:
+        for name in video["shots"]:
+            shot = story["shots"][name]
+            if shot["kind"] in ("demo", "console"):
+                assert 0 <= shot["start"] < shot["end"] <= sources[shot["source"]]["duration"]
+    fonts = tuple(font_file(name) for name in ("Lato:style=Heavy", "Lato:style=Regular", "JetBrains Mono"))
+    base = background()
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    previous = {}
+    if args.only and (output / "manifest.json").is_file():
+        previous = json.loads((output / "manifest.json").read_text())
+    with tempfile.TemporaryDirectory(prefix=".render-", dir=output) as temporary:
+        work = Path(temporary)
+        rendered = {}
+        for video in videos:
+            timeline = []
+            segments = []
+            cursor = 0
+            for name in video["shots"]:
+                shot = {**story["shots"][name], **video.get("overrides", {}).get(name, {})}
+                key = name + "-" + hashlib.sha256(json.dumps(shot, sort_keys=True).encode()).hexdigest()[:8]
+                if key not in rendered:
+                    print(f"Rendering {name}…", flush=True)
+                    rendered[key] = work / (key + ".mp4")
+                    if shot["kind"] == "card":
+                        render_card(shot, rendered[key], fonts, base)
+                    elif shot["kind"] == "console":
+                        render_console(shot, rendered[key])
+                    else:
+                        render_demo(shot, rendered[key], fonts, base, work)
+                segments.append(rendered[key])
+                duration = float(probe(rendered[key])["format"]["duration"])
+                timeline.append({"shot": name, "start": round(cursor, 3), "duration": duration})
+                cursor += duration
+            concat = work / "concat.txt"
+            # All segment names are fixed storyboard identifiers; no shell interpolation.
+            concat.write_text("".join(f"file '{segment.name}'\n" for segment in segments))
+            target = output / (video["id"] + ".mp4")
+            candidate = work / (video["id"] + ".mp4")
+            run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "1",
+                 "-i", str(concat), "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+                 "-map", "0:v", "-map", "1:a", "-vf", f"fps={FPS}",
+                 "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p",
+                 "-threads", "4", "-video_track_timescale", "15360", "-c:a", "aac", "-b:a", "128k",
+                 "-shortest", "-movflags", "+faststart", str(candidate)])
+            video.update(validate(candidate), timeline=timeline,
+                         sha256=hashlib.sha256(candidate.read_bytes()).hexdigest())
+            candidate.replace(target)
+            poster_time = video.get("poster_time", 1.5)
+            run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", str(poster_time),
+                 "-i", str(target), "-frames:v", "1", "-q:v", "2", str(output / (video["id"] + ".jpg"))])
+            print(f"Wrote {target.name}: {video['duration']}s, {video['bytes']/1e6:.2f} MB", flush=True)
+        # A focused revision keeps the other exports available in the gallery.
+        if previous:
+            combined = {video["id"]: video for video in previous["videos"]}
+            combined.update({video["id"]: video for video in videos})
+            videos = [combined[video["id"]] for video in story["videos"] if video["id"] in combined]
+            sources = {**previous["sources"], **sources}
+        (output / "manifest.json").write_text(json.dumps({"sources": sources, "audio": "silent AAC", "videos": videos}, indent=2) + "\n")
+        gallery(videos, output)
+    print(f"Preview: {output / 'index.html'}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
