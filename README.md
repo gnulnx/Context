@@ -1,6 +1,7 @@
 # Base Layer Context
 
 <p align="center">
+  <strong>Zero-config local agent memory that just works.</strong><br>
   <strong>Persistent, private memory for coding agents.</strong><br>
   Recall recent work and saved decisions across sessions, projects, and restarts on your machine.
 </p>
