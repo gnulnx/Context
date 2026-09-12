@@ -21,9 +21,9 @@ We meet you where you work—the console—and then stay out of your way. Once i
 
 ![Base Layer Context Installation Demo](assets/demo.gif)
 
-When you return to your codebase, your agent can retrieve recent work and durable saved decisions with source references:
+Tell Codex the magic word in one session. Ask again in a fresh session—Context brings the answer back:
 
-![Codex Recall Preview](assets/codex-recall-preview.svg)
+![Two Codex sessions: say the magic word is Base, then recall it through Base Layer Context](assets/recall.gif)
 
 ---
 

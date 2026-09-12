@@ -11,14 +11,17 @@ import pytest
 
 @pytest.mark.parametrize("size", [9_999_999, 10_000_000, 10_000_001])
 @pytest.mark.parametrize("posixly_correct", [False, True], ids=["default", "posix"])
-def test_gif_byte_limit_preserves_previous_output_on_failure(tmp_path, size, posixly_correct):
+@pytest.mark.parametrize("demo_name", ["demo", "recall"])
+def test_gif_byte_limit_preserves_previous_output_on_failure(tmp_path, size, posixly_correct, demo_name):
     assets = tmp_path / "assets"
     assets.mkdir()
     script = assets / "make-demo-gif"
     shutil.copyfile(Path(__file__).parents[1] / "assets" / script.name, script)
-    (assets / "demo.tape").touch()
-    output = assets / "demo.gif"
+    (assets / f"{demo_name}.tape").touch()
+    output = assets / f"{demo_name}.gif"
     output.write_bytes(b"previous valid GIF")
+    other_output = assets / ("demo.gif" if demo_name == "recall" else "recall.gif")
+    other_output.write_bytes(b"separate recording")
 
     executables = tmp_path / "bin"
     executables.mkdir()
@@ -43,7 +46,7 @@ def test_gif_byte_limit_preserves_previous_output_on_failure(tmp_path, size, pos
         # Make GNU utilities stop at the first operand, as BSD utilities do.
         env["POSIXLY_CORRECT"] = "1"
     result = subprocess.run(
-        ["bash", str(script)], env=env, capture_output=True, text=True, check=False,
+        ["bash", str(script), demo_name], env=env, capture_output=True, text=True, check=False,
     )
 
     if size < 10_000_000:
@@ -55,3 +58,4 @@ def test_gif_byte_limit_preserves_previous_output_on_failure(tmp_path, size, pos
         assert "must be below 10000000 bytes" in result.stderr
         assert output.read_bytes() == b"previous valid GIF"
     assert not list(assets.glob(".make-demo-gif.*"))
+    assert other_output.read_bytes() == b"separate recording"
