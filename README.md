@@ -16,7 +16,7 @@
 ---
 
 ## The Payoff: Immediate Agent Recall
-For example: Tell Codex a magic word in one session. Ask again in a fresh session and Base Layer Context brings the answer back:
+**For example:** Tell Codex a magic word in one session. Ask again in a fresh session and Base Layer Context brings the answer back:
 
 ![Two Codex sessions: say the magic word is Base, then recall it through Base Layer Context](assets/recall.gif)
 
@@ -29,7 +29,9 @@ For example: Tell Codex a magic word in one session. Ask again in a fresh sessio
 ## Why Base Layer Context?
 
 Coding agents suffer from **agent amnesia**. 
-Sessions ***end***. Context ***disappears***. Rebuilding that context manually ***wastes time and tokens.***
+Sessions ***end***.
+Context ***disappears***.
+Rebuilding that context manually ***wastes time and tokens.***
 
 Base Layer Context bridges this gap with a lightweight, private, system-level memory daemon:
 
