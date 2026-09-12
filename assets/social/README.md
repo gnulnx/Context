@@ -2,7 +2,7 @@
 
 Three separate social edits of the existing installer and recall recordings:
 
-- **The magic trick (console revision):** one opening line on charcoal, full terminal panes, the real recall response, and a plain GitHub end card.
+- **The magic trick (console revision):** one opening line on charcoal, visible hook approval, full terminal panes, the real recall response, and a plain GitHub end card.
 - **The brand introduction:** fade and glow on the name, slide in the promise, then show recall.
 - **Install. Tell it. Ask again.:** follow the integration from installation through recall.
 
@@ -33,10 +33,13 @@ To render just one cut:
 ```
 
 The console revision keeps one steady crop through each conversation, leaves
-space above the native pane title, and holds the Codex welcome screen before
-typing. It has no numbered captions, outer display box, or separate “New
+space above the native pane title, and shows the recorded “Hooks need review”
+prompt and “Trust all and continue” selection for five seconds after the opening
+line. It then holds the Codex welcome screen before typing. It has no numbered
+captions, outer display box, or separate “New
 session” card. Rendering one cut preserves the other videos and their gallery
 entries. Preview URLs include a content revision so a changed MP4 reloads.
+The recorded “Base” answer holds for about two seconds before the final card.
 The final card holds for seven seconds with a larger name, terminal-blue
 “Context,” and a smaller grey tagline and GitHub URL. It stays fully visible
 through the final frame.

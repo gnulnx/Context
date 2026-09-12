@@ -196,6 +196,19 @@
       "style": "console-open",
       "duration": 1.6
     },
+    "magic-hooks": {
+      "start": 3.6,
+      "end": 6.4,
+      "speed": 0.56,
+      "kind": "console",
+      "source": "recall.mp4",
+      "crop": [
+        20,
+        40,
+        776,
+        760
+      ]
+    },
     "magic-welcome": {
       "start": 6.4,
       "end": 6.9,
@@ -289,7 +302,7 @@
     },
     "magic-answer": {
       "start": 31.6,
-      "end": 36.2,
+      "end": 34.08,
       "speed": 1,
       "kind": "console",
       "source": "recall.mp4",
@@ -310,9 +323,10 @@
     {
       "id": "01-magic-trick",
       "title": "The magic trick",
-      "description": "Console cut: one opening line, full terminal panes, and a remembered answer.",
+      "description": "Console cut: visible hook approval, full terminal panes, and a remembered answer.",
       "shots": [
         "magic-open",
+        "magic-hooks",
         "magic-welcome",
         "magic-tell",
         "magic-launch",
@@ -323,7 +337,7 @@
         "magic-answer",
         "magic-end"
       ],
-      "revision": 3,
+      "revision": 5,
       "poster_time": 0.7
     },
     {
